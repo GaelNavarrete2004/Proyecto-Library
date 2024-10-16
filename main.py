@@ -214,7 +214,7 @@ class VentanaPago(QDialog):
     
     def pay(self):
         if self.credit == 0:
-            QtWidgets.QMessageBox.information(None, "Saldo pendiente", "Actualmente no tienes saldo pendiente por pagar.")
+            QtWidgets.QMessageBox.information(None, "Saldo pendiente", "Actualmente no tienes saldo pendiente por pagar.asdsads")
             return
         else:
             ventana_pago = VentanaPago(self.account_id, self.credit, self.account_email, self.main_window)
