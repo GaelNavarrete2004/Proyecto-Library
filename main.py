@@ -631,7 +631,7 @@ class Ui_MainWindow(object):
         self.tableSearch.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.tableSearch.setAlternatingRowColors(False)
         self.tableSearch.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        self.tableSearch.setColumnCount(6)
+        self.tableSearch.setColumnCount(5)
         self.tableSearch.setObjectName("tableSearch")
         self.tableSearch.setRowCount(0)
         item = QtWidgets.QTableWidgetItem()
@@ -644,8 +644,6 @@ class Ui_MainWindow(object):
         self.tableSearch.setHorizontalHeaderItem(3, item)
         item = QtWidgets.QTableWidgetItem()
         self.tableSearch.setHorizontalHeaderItem(4, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableSearch.setHorizontalHeaderItem(5, item)
         header = self.tableSearch.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
@@ -698,7 +696,7 @@ class Ui_MainWindow(object):
         self.gridLayout_2.setObjectName("gridLayout_2")
         
         self.tableMyBooks = QtWidgets.QTableWidget(self.tab_mybooks)
-        self.tableMyBooks.setColumnCount(8)
+        self.tableMyBooks.setColumnCount(7)
         self.tableMyBooks.setObjectName("tableWidget")
         self.tableMyBooks.setRowCount(0)
         header = self.tableMyBooks.horizontalHeader()
@@ -709,7 +707,6 @@ class Ui_MainWindow(object):
         header.setSectionResizeMode(4, QHeaderView.Stretch)
         header.setSectionResizeMode(5, QHeaderView.Stretch)
         header.setSectionResizeMode(6, QHeaderView.Stretch)
-        header.setSectionResizeMode(7, QHeaderView.Stretch)
         item = QtWidgets.QTableWidgetItem()
         self.tableMyBooks.setHorizontalHeaderItem(0, item)
         item = QtWidgets.QTableWidgetItem()
@@ -724,8 +721,6 @@ class Ui_MainWindow(object):
         self.tableMyBooks.setHorizontalHeaderItem(5, item)
         item = QtWidgets.QTableWidgetItem()
         self.tableMyBooks.setHorizontalHeaderItem(6, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableMyBooks.setHorizontalHeaderItem(7, item)
         self.gridLayout_2.addWidget(self.tableMyBooks, 0, 0, 1, 2)
         
         self.tabWidget.currentChanged.connect(self.tab_changed)
@@ -1115,8 +1110,6 @@ class Ui_MainWindow(object):
         item.setText(_translate("MainWindow", "ID"))
         item = self.tableSearch.horizontalHeaderItem(4)
         item.setText(_translate("MainWindow", "Estado"))
-        item = self.tableSearch.horizontalHeaderItem(5)
-        item.setText(_translate("MainWindow", "Calificación"))
         self.tableSearch.resizeColumnsToContents()
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_search), _translate("MainWindow", "Busqueda"))
         item = self.tableHistory.horizontalHeaderItem(0)
@@ -1149,8 +1142,6 @@ class Ui_MainWindow(object):
         item.setText(_translate("MainWindow", "Fecha de devolución"))
         item = self.tableMyBooks.horizontalHeaderItem(6)
         item.setText(_translate("MainWindow", "Estado"))
-        item = self.tableMyBooks.horizontalHeaderItem(7)
-        item.setText(_translate("MainWindow", "Calificación"))
         self.tableMyBooks.resizeColumnsToContents()
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_mybooks), _translate("MainWindow", "Mis libros"))
         self.label_2.setText(_translate("MainWindow", "Iniciar Sesión"))
@@ -1334,7 +1325,7 @@ class Ui_MainWindow(object):
                 for row_number, row_data in enumerate(cur):
                     self.tableSearch.insertRow(row_number)
                     # Ajusta el orden de los datos para mostrarlos en la tabla
-                    data_order = [3, 1, 4, 0, 2, 5]  # Orden de las columnas: titulo, autor, genero, id, estado, calificacion
+                    data_order = [3, 1, 4, 0, 2]  # Orden de las columnas: titulo, autor, genero, id, estado
                     for column_number, index in enumerate(data_order):
                         if index == 2:  # Si la columna es la del estado
                             estado = "Disponible" if row_data[index] == 1 else "No disponible"
@@ -1361,7 +1352,6 @@ class Ui_MainWindow(object):
                 header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)  # Columna "Autor"
                 header.setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeToContents)  # Columna "ID Libro"
                 header.setSectionResizeMode(4, QtWidgets.QHeaderView.ResizeToContents)  # Columna "Estado"
-                header.setSectionResizeMode(5, QtWidgets.QHeaderView.ResizeToContents)
                 self.tableSearch.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
                 self.tableSearch.horizontalHeader().setStretchLastSection(True)
                 
@@ -1490,7 +1480,7 @@ class Ui_MainWindow(object):
             QtWidgets.QMessageBox.critical(None, "Error", "Debes iniciar sesión para ver tus libros.")
             return
         # Obtener los préstamos del usuario actual
-        query = "SELECT prestamo.id, libro.titulo, libro.autor, libro.id, prestamo.fecha_prestamo, prestamo.fecha_devolucion, prestamo.devuelto, libro.calificacion FROM prestamo INNER JOIN libro ON prestamo.id_libro = libro.id WHERE prestamo.id_usuario = ?"
+        query = "SELECT prestamo.id, libro.titulo, libro.autor, libro.id, prestamo.fecha_prestamo, prestamo.fecha_devolucion, prestamo.devuelto FROM prestamo INNER JOIN libro ON prestamo.id_libro = libro.id WHERE prestamo.id_usuario = ?"
         values = (self.account_id)
         cur = self.consulta(query, values)
         if cur.rowcount > 0:
@@ -1517,7 +1507,6 @@ class Ui_MainWindow(object):
             header.setSectionResizeMode(4, QtWidgets.QHeaderView.ResizeToContents)
             header.setSectionResizeMode(5, QtWidgets.QHeaderView.ResizeToContents)
             header.setSectionResizeMode(6, QtWidgets.QHeaderView.ResizeToContents)
-            header.setSectionResizeMode(7, QtWidgets.QHeaderView.ResizeToContents)
             self.tableMyBooks.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
             self.tableMyBooks.horizontalHeader().setStretchLastSection(True)
             
