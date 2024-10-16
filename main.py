@@ -5,7 +5,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import (QMainWindow, QPushButton, QVBoxLayout, 
                              QLineEdit, QLabel, QDialog, QDesktopWidget, 
                              QMessageBox, QTableWidget, QTableWidgetItem, 
-                             QHeaderView, QComboBox, QHBoxLayout)
+                             QHeaderView, QComboBox, QHBoxLayout, QDoubleSpinBox)
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt
 from datetime import datetime, timedelta
@@ -51,6 +51,150 @@ def abrir_directorio():
 
 # Quitar comentario para abrir el directorio
 # abrir_directorio()
+
+class VentanaCalificar(QDialog):
+    def __init__(self, id_libro, titulo_libro, account_id, parent=None):
+        super().__init__(parent)
+        self.id_libro = id_libro
+        self.titulo_libro = titulo_libro
+        self.account_id = account_id
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle("Calificar libro")
+        self.setFixedSize(500, 250)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+
+        # Aplicamos un nuevo estilo CSS
+        self.setStyleSheet("""
+            QWidget {
+                background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #dac8ae, stop:1 #eae1d0);
+                color: #111111;
+                font-family: 'Arial', sans-serif;
+                font-size: 14px;
+            }
+
+            QPushButton {
+                background-color: #EFDECD;
+                color: #1A1110;
+                border: 2px solid #1A1110;
+                border-radius: 8px;
+                padding: 8px;
+                transition: background-color 0.3s ease;
+            }
+
+            QPushButton:hover {
+                background-color: #CC7722;
+                border-color: #8B4513;
+            }
+
+            QLineEdit, QDoubleSpinBox {
+                background-color: #FFFFFF;
+                color: #111111;
+                border: 2px solid #00416A;
+                padding: 6px;
+                border-radius: 5px;
+            }
+
+            QLabel {
+                color: #1A1110;
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+        """)
+
+        # Añadimos los elementos visuales
+        self.labelTitulo = QLabel(self)
+        self.labelTitulo.setText(f"Libro: {self.titulo_libro}")
+        self.labelTitulo.setAlignment(Qt.AlignCenter)
+
+        self.labelCalificacion = QLabel(self)
+        self.labelCalificacion.setText("Calificación (0.0 - 5.0):")
+
+        # Cambiamos QComboBox por QDoubleSpinBox para permitir decimales
+        self.spinCalificacion = QDoubleSpinBox(self)
+        self.spinCalificacion.setRange(0.0, 5.0)  # Rango entre 0.0 y 5.0
+        self.spinCalificacion.setSingleStep(0.1)  # Incrementos de 0.1
+        self.spinCalificacion.setDecimals(1)  # Mostrar solo un decimal
+
+        # Mejoramos el botón "Calificar"
+        self.btnCalificar = QPushButton("Calificar", self)
+        self.btnCalificar.setIcon(QIcon("icono_calificar.png"))  # Agrega un ícono si lo deseas
+        self.btnCalificar.setCursor(Qt.PointingHandCursor)
+        self.btnCalificar.clicked.connect(self.calificar)
+
+        # Disposición y espaciado
+        layout = QVBoxLayout()
+        layout.setSpacing(15)
+        layout.addWidget(self.labelTitulo)
+        layout.addWidget(self.labelCalificacion)
+        layout.addWidget(self.spinCalificacion)
+        layout.addWidget(self.btnCalificar)
+
+        self.setLayout(layout)
+        self.center()
+
+    def center(self):
+        """Centrar la ventana en la pantalla."""
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
+    def conectar(self):
+        """Conectar con la base de datos."""
+        try:
+            conn = mariadb.connect(
+                user="libraryPy",
+                password="michoacan",
+                host="64.23.180.219",
+                port=3306,
+                database="biblioteca"
+            )
+            return conn
+        except Exception as e:
+            print("Error al conectar con la base de datos:", e)
+            return None
+        
+    def calificar(self):
+        """Función para calificar el libro."""
+        calificacion = self.spinCalificacion.value()  # Obtener el valor decimal del QDoubleSpinBox
+        conn = self.conectar()
+        if conn:
+            try:
+                cursor = conn.cursor()
+
+                # 1. Insertar la calificación del usuario en la tabla 'calificaciones'
+                cursor.execute(
+                    "INSERT INTO calificaciones (id_usuario, id_libro, calificacion) VALUES (?, ?, ?)",
+                    ( self.id_libro, self.account_id, calificacion)  # Cambié el orden aquí
+                )
+                conn.commit()
+
+                # 2. Calcular el promedio de las calificaciones de este libro
+                cursor.execute("SELECT AVG(calificacion) FROM calificaciones WHERE id_libro = ?", (self.account_id,))
+                promedio_calificacion = cursor.fetchone()[0]
+
+                # 3. Actualizar el campo 'calificacion' en la tabla 'libros' con el nuevo promedio
+                cursor.execute("UPDATE libro SET calificacion = ? WHERE id = ?", (promedio_calificacion, self.account_id))
+                conn.commit()
+
+                # Mostrar un mensaje de éxito
+                QtWidgets.QMessageBox.information(self, "Calificación", "Calificación realizada con éxito.")
+                self.accept()
+
+            except mariadb.Error as e:
+                print(f"Error al calificar el libro: {e}")
+            finally:
+                conn.close()
+        else:
+            QtWidgets.QMessageBox.critical(self, "Error", "No se pudo conectar a la base de datos.")
+
+        
+
+
+
+
 
 class VentanaPago(QDialog):
     def __init__(self, account_id, credit, account_email):
@@ -726,7 +870,7 @@ class Ui_MainWindow(object):
         self.tableMyBooks.setHorizontalHeaderItem(6, item)
         item = QtWidgets.QTableWidgetItem()
         self.tableMyBooks.setHorizontalHeaderItem(7, item)
-        self.gridLayout_2.addWidget(self.tableMyBooks, 0, 0, 1, 2)
+        self.gridLayout_2.addWidget(self.tableMyBooks, 0, 0, 1, 3)
         
         self.tabWidget.currentChanged.connect(self.tab_changed)
         self.tableMyBooks.verticalHeader().setVisible(False)
@@ -742,6 +886,11 @@ class Ui_MainWindow(object):
         self.btnDevolver.setObjectName("btnDevolver")
         self.gridLayout_2.addWidget(self.btnDevolver, 1, 1, 1, 1)
         self.btnDevolver.clicked.connect(self.devolver_reserva)
+
+        self.btnCalificar = QtWidgets.QPushButton(self.tab_mybooks)
+        self.btnCalificar.setObjectName("btnCalificar")
+        self.gridLayout_2.addWidget(self.btnCalificar, 1, 2, 1, 1)
+        self.btnCalificar.clicked.connect(self.calificar)
         
         
         self.tabWidget.addTab(self.tab_mybooks, "")
@@ -1135,6 +1284,7 @@ class Ui_MainWindow(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_history), _translate("MainWindow", "Historial de prestamos"))
         self.btnCancelar.setText(_translate("MainWindow", "Cancelar reserva"))
         self.btnDevolver.setText(_translate("MainWindow", "Devolver libro"))
+        self.btnCalificar.setText(_translate("MainWindow", "Calificar libro"))
         item = self.tableMyBooks.horizontalHeaderItem(0)
         item.setText(_translate("MainWindow", "ID"))
         item = self.tableMyBooks.horizontalHeaderItem(1)
@@ -1150,7 +1300,7 @@ class Ui_MainWindow(object):
         item = self.tableMyBooks.horizontalHeaderItem(6)
         item.setText(_translate("MainWindow", "Estado"))
         item = self.tableMyBooks.horizontalHeaderItem(7)
-        item.setText(_translate("MainWindow", "Calificación"))
+        item.setText(_translate("MainWindow", "Mi Calificación"))
         self.tableMyBooks.resizeColumnsToContents()
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_mybooks), _translate("MainWindow", "Mis libros"))
         self.label_2.setText(_translate("MainWindow", "Iniciar Sesión"))
@@ -1768,6 +1918,16 @@ Gracias por tu preferencia.
         else:
             ventana_pago = VentanaPago(self.account_id, self.credit, self.account_email)
             ventana_pago.exec_()
+
+    def calificar(self):
+        selected_row = self.tableMyBooks.currentRow()
+        if selected_row >= 0:
+            titulo_libro = self.tableMyBooks.item(selected_row, 1).text()  # Nombre del libro
+            id_libro = int(self.tableMyBooks.item(selected_row, 3).text()) 
+            ventana_calificar = VentanaCalificar(self.account_id, titulo_libro, id_libro)
+            ventana_calificar.exec_()
+        else:
+            QtWidgets.QMessageBox.critical(None, "Error", "Selecciona un libro para calificar.")
 
 if __name__ == "__main__":
     import sys
