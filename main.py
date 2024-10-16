@@ -211,6 +211,14 @@ class VentanaPago(QDialog):
         return checksum % 10 == 0
     
     def pay(self):
+        if self.credit == 0:
+            QtWidgets.QMessageBox.information(None, "Saldo pendiente", "Actualmente no tienes saldo pendiente por pagar.")
+            return
+        else:
+            ventana_pago = VentanaPago(self.account_id, self.credit, self.account_email)
+            ventana_pago.sancionar_usuarios()
+            ventana_pago.exec_()
+            
         # Obtener los datos ingresados por el usuario
         nombre = self.inputNombre.text()
         tarjeta = self.inputTarjeta.text().replace(" ", "")
@@ -236,7 +244,7 @@ class VentanaPago(QDialog):
                 # Realizar el pago y actualizar el crédito del usuario
                 cursor.execute("UPDATE usuarios SET credit = 0 WHERE id = ?", (self.account_id,))
                 conn.commit()
-                QtWidgets.QMessageBox.information(None, "Pago exitoso", "El pago se ha realizado con éxito.\nPuede que el pago tarde un poco en verse reflejado, reinicie la aplicación si el pago no se ve reflejado.")
+                QtWidgets.QMessageBox.information(None, "Pago exitoso", "El pago se ha realizado con éxito. Y se han eliminado las sanciones\nPuede que el pago tarde un poco en verse reflejado, reinicie la aplicación si el pago no se ve reflejado.")
             except mariadb.Error as e:
                 print(f"Error al actualizar la base de datos: {e}")
             finally:
@@ -272,6 +280,41 @@ Gracias por tu preferencia.
     
         # Cerrar la ventana de pago
         self.accept()
+
+    def sancionar_usuarios(self):
+        try:
+            conn = self.conectar()
+            if conn:
+                cursor = conn.cursor()
+                # Obtener solo el usuario que ha iniciado sesión
+                cursor.execute("SELECT DATEDIFF(NOW(), fecha_prestamo) as dias_retraso FROM prestamo WHERE id_usuario = ? AND fecha_prestamo < NOW() AND devuelto = 0", (self.account_id,))
+                resultado = cursor.fetchone()  # Usamos fetchone() para obtener solo una fila
+
+                if resultado:  # Verificamos si se encontró un resultado
+                    dias_retraso = resultado[0]  # Días de retraso
+                    if dias_retraso > 0:
+                        if dias_retraso <= 7:
+                            multa = dias_retraso * 5  # Multa de 5 unidades por día de retraso
+                            cursor.execute("UPDATE usuarios SET multa = multa + ? WHERE id = ?", (multa, self.account_id))
+                            conn.commit()
+                            QtWidgets.QMessageBox.information(self.main_window, "Sanción aplicada", f"Se ha aplicado una multa de {multa} unidades por {dias_retraso} días de retraso.")
+                            conn.commit()
+                        else:
+                            cursor.execute("UPDATE usuarios SET cuenta_cancelada = 2 WHERE id = ?", (self.account_id,))
+                            conn.commit()
+                            QtWidgets.QMessageBox.information(self.main_window, "Sanción aplicada", "Se ha cancelado la cuenta del usuario por más de 7 días de retraso.")
+                            conn.commit()
+                else:
+                    QtWidgets.QMessageBox.information(self.main_window, "Información", "No hay libros no devueltos a tiempo.")
+                
+                conn.commit()  # Asegúrate de hacer commit para guardar los cambios en la base de datos
+            else:
+                QtWidgets.QMessageBox.critical(self.main_window, "Error", "No se pudo conectar a la base de datos.")
+        except mariadb.Error as e:
+            print(f"Error al actualizar la base de datos: {e}")
+        finally:
+            if conn:
+                conn.close()
 
 class VentanaRegistro(QDialog):
     def __init__(self):
@@ -471,6 +514,7 @@ class Ui_MainWindow(object):
     def __init__(self):
         self.key = self.cargar_clave()  # Carga la clave en una variable de instancia
         self.cipher_suite = Fernet(self.key)  # Crea la suite de cifrado
+        self.main_window = MainWindow
         
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -1755,8 +1799,45 @@ Gracias por tu preferencia.
             QtWidgets.QMessageBox.information(None, "Saldo pendiente", "Actualmente no tienes saldo pendiente por pagar.")
             return
         else:
+            self.sancionar_usuarios()
             ventana_pago = VentanaPago(self.account_id, self.credit, self.account_email)
             ventana_pago.exec_()
+
+    def sancionar_usuarios(self):
+        try:
+            conn = self.conectar()
+            if conn:
+                cursor = conn.cursor()
+                # Obtener solo el usuario que ha iniciado sesión
+                cursor.execute("SELECT DATEDIFF(NOW(), fecha_prestamo) as dias_retraso FROM prestamo WHERE id_usuario = ? AND fecha_prestamo < NOW() AND devuelto = 0", (self.account_id,))
+                resultado = cursor.fetchone()  # Usamos fetchone() para obtener solo una fila
+
+                if resultado:  # Verificamos si se encontró un resultado
+                    dias_retraso = resultado[0]  # Días de retraso
+                    if dias_retraso > 0:
+                        if dias_retraso <= 7:
+                            multa = dias_retraso * 5  # Multa de 5 unidades por día de retraso
+                            cursor.execute("UPDATE usuarios SET multa = multa + ? WHERE id = ?", (multa, self.account_id))
+                            conn.commit()
+                            QtWidgets.QMessageBox.information(self.main_window, "Sanción aplicada", f"Se ha aplicado una multa de {multa} unidades por {dias_retraso} días de retraso.")
+                            conn.commit()
+                        else:
+                            cursor.execute("UPDATE usuarios SET cuenta_cancelada = 2 WHERE id = ?", (self.account_id,))
+                            conn.commit()
+                            QtWidgets.QMessageBox.information(self.main_window, "Sanción aplicada", "Se ha cancelado la cuenta del usuario por más de 7 días de retraso.")
+                            conn.commit()
+                else:
+                    QtWidgets.QMessageBox.information(self.main_window, "Información", "No hay libros no devueltos a tiempo.")
+                
+                conn.commit()  # Asegúrate de hacer commit para guardar los cambios en la base de datos
+            else:
+                QtWidgets.QMessageBox.critical(self.main_window, "Error", "No se pudo conectar a la base de datos.")
+        except mariadb.Error as e:
+            print(f"Error al actualizar la base de datos: {e}")
+        finally:
+            if conn:
+                conn.close()
+
 
 if __name__ == "__main__":
     import sys
