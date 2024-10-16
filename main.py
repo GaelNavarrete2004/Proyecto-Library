@@ -53,11 +53,13 @@ def abrir_directorio():
 # abrir_directorio()
 
 class VentanaPago(QDialog):
-    def __init__(self, account_id, credit, account_email):
+    def __init__(self, account_id, credit, account_email, main_window):
         super().__init__()
         self.credit = credit
         self.account_id = account_id
         self.account_email = account_email
+        self.main_window = main_window  # Almacena la referencia a la ventana principal
+        self.sancion_aplicada = False
         self.init_ui()
 
     def init_ui(self):
@@ -215,9 +217,12 @@ class VentanaPago(QDialog):
             QtWidgets.QMessageBox.information(None, "Saldo pendiente", "Actualmente no tienes saldo pendiente por pagar.")
             return
         else:
-            ventana_pago = VentanaPago(self.account_id, self.credit, self.account_email)
-            ventana_pago.sancionar_usuarios()
+            ventana_pago = VentanaPago(self.account_id, self.credit, self.account_email, self.main_window)
             ventana_pago.exec_()
+             # Verificar la bandera antes de llamar a sancionar_usuarios
+            if not self.sancion_aplicada:
+                ventana_pago.sancionar_usuarios()
+                self.sancion_aplicada = True  # Actualizar la bandera después de llamar a sancionar_usuarios
             
         # Obtener los datos ingresados por el usuario
         nombre = self.inputNombre.text()
@@ -242,13 +247,13 @@ class VentanaPago(QDialog):
             try:
                 cursor = conn.cursor()
                 # Realizar el pago y actualizar el crédito del usuario
-                cursor.execute("UPDATE usuarios SET credit = 0 WHERE id = ?", (self.account_id,))
+                cursor.execute("UPDATE usuarios SET credit = 0, cuenta_cancelada = 1, multa = 0 WHERE id = ?", (self.account_id,))
                 conn.commit()
                 QtWidgets.QMessageBox.information(None, "Pago exitoso", "El pago se ha realizado con éxito. Y se han eliminado las sanciones\nPuede que el pago tarde un poco en verse reflejado, reinicie la aplicación si el pago no se ve reflejado.")
+                conn.commit()
             except mariadb.Error as e:
                 print(f"Error al actualizar la base de datos: {e}")
             finally:
-                
                 conn.close()
             fecha_hoy = datetime.now().strftime('%d / %m / %Y')
             subject = f"Saldo pendiente liquidado"
@@ -300,10 +305,9 @@ Gracias por tu preferencia.
                             QtWidgets.QMessageBox.information(self.main_window, "Sanción aplicada", f"Se ha aplicado una multa de {multa} unidades por {dias_retraso} días de retraso.")
                             conn.commit()
                         else:
-                            cursor.execute("UPDATE usuarios SET cuenta_cancelada = 2 WHERE id = ?", (self.account_id,))
+                            cursor.execute("UPDATE usuarios SET cuenta_cancelada = 2, multa = 10 WHERE id = ?", (self.account_id,))
                             conn.commit()
                             QtWidgets.QMessageBox.information(self.main_window, "Sanción aplicada", "Se ha cancelado la cuenta del usuario por más de 7 días de retraso.")
-                            conn.commit()
                 else:
                     QtWidgets.QMessageBox.information(self.main_window, "Información", "No hay libros no devueltos a tiempo.")
                 
@@ -506,12 +510,12 @@ class VentanaRegistro(QDialog):
     def insertar_usuarios(self, email, contraseña, nombre, apellido1, apellido2):
         query = "INSERT INTO usuarios (email, password, name, last_name1, last_name2) VALUES (?, ?, ?, ?, ?)"
         values = (email, contraseña, nombre, apellido1, apellido2)
-        # Ejecutar la consulta y retornar el ID del usuario registrado
-        return self.ejecutar_query(query, values)
-    
 class Ui_MainWindow(object):
-    
     def __init__(self):
+        self.key = self.cargar_clave()  # Carga la clave en una variable de instancia
+        self.cipher_suite = Fernet(self.key)  # Crea la suite de cifrado
+        self.main_window = MainWindow
+        self.sancion_aplicada = False  # Bandera para rastrear si sancionar_usuarios ya ha sido llamada
         self.key = self.cargar_clave()  # Carga la clave en una variable de instancia
         self.cipher_suite = Fernet(self.key)  # Crea la suite de cifrado
         self.main_window = MainWindow
@@ -1799,8 +1803,10 @@ Gracias por tu preferencia.
             QtWidgets.QMessageBox.information(None, "Saldo pendiente", "Actualmente no tienes saldo pendiente por pagar.")
             return
         else:
-            self.sancionar_usuarios()
-            ventana_pago = VentanaPago(self.account_id, self.credit, self.account_email)
+            ventana_pago = VentanaPago(self.account_id, self.credit, self.account_email, self.main_window)  # Pasa main_window aquí
+            if not self.sancion_aplicada:
+                ventana_pago.sancionar_usuarios()
+                self.sancion_aplicada = True  # Actualizar la bandera después de llamar a sancionar_usuarios
             ventana_pago.exec_()
 
     def sancionar_usuarios(self):
@@ -1822,7 +1828,7 @@ Gracias por tu preferencia.
                             QtWidgets.QMessageBox.information(self.main_window, "Sanción aplicada", f"Se ha aplicado una multa de {multa} unidades por {dias_retraso} días de retraso.")
                             conn.commit()
                         else:
-                            cursor.execute("UPDATE usuarios SET cuenta_cancelada = 2 WHERE id = ?", (self.account_id,))
+                            cursor.execute("UPDATE usuarios SET cuenta_cancelada = 2, multa = 10 WHERE id = ?", (self.account_id,))
                             conn.commit()
                             QtWidgets.QMessageBox.information(self.main_window, "Sanción aplicada", "Se ha cancelado la cuenta del usuario por más de 7 días de retraso.")
                             conn.commit()
