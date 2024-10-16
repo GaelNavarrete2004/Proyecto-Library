@@ -106,7 +106,7 @@ class VentanaPago(QDialog):
         """)
         # Saldo pendiente
         self.labelCredit = QLabel(self)
-        self.labelCredit.setText(f"Saldo pendiente: ${self.credit}.00 MXN")
+        self.labelCredit.setText(f"Saldo pendiente: ${self.credit}")
         # Etiqueta para nombre del beneficiario
         self.labelNombre = QLabel(self)
         self.labelNombre.setText("Nombre del beneficiario:")
@@ -204,9 +204,6 @@ class VentanaPago(QDialog):
         mes_vencimiento = self.comboMes.currentText()
         año_vencimiento = self.comboAño.currentText()
         # Verificar si el nombre es válido
-        if not nombre:
-            QtWidgets.QMessageBox.critical(None, "Error", "Por favor, ingrese el nombre del beneficiario.")
-            return
         # Verificar si la tarjeta es válida (solo números y longitud de 16)
         if not re.match("^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{4}$", tarjeta):
             QtWidgets.QMessageBox.critical(None, "Error", "Número de tarjeta inválido.")
@@ -637,7 +634,7 @@ class Ui_MainWindow(object):
         self.tableSearch.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.tableSearch.setAlternatingRowColors(False)
         self.tableSearch.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        self.tableSearch.setColumnCount(5)
+        self.tableSearch.setColumnCount(6)
         self.tableSearch.setObjectName("tableSearch")
         self.tableSearch.setRowCount(0)
         item = QtWidgets.QTableWidgetItem()
@@ -650,6 +647,8 @@ class Ui_MainWindow(object):
         self.tableSearch.setHorizontalHeaderItem(3, item)
         item = QtWidgets.QTableWidgetItem()
         self.tableSearch.setHorizontalHeaderItem(4, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableSearch.setHorizontalHeaderItem(5, item)
         header = self.tableSearch.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
@@ -728,6 +727,7 @@ class Ui_MainWindow(object):
         item = QtWidgets.QTableWidgetItem()
         self.tableMyBooks.setHorizontalHeaderItem(6, item)
         self.gridLayout_2.addWidget(self.tableMyBooks, 0, 0, 1, 2)
+        
         
         self.tabWidget.currentChanged.connect(self.tab_changed)
         self.tableMyBooks.verticalHeader().setVisible(False)
@@ -1064,6 +1064,42 @@ class Ui_MainWindow(object):
         
         self.tabWidget.addTab(self.tab_user, "")
 
+                #CLON DE HISTORIAL DE PRESTAMOS, SI SALE ALGO MAL ES CULPA DE DANI
+        self.tab_orders = QtWidgets.QWidget()
+        self.tab_orders.setObjectName("tab_order")
+        self.gridLayout_9 = QtWidgets.QGridLayout(self.tab_orders)
+        self.gridLayout_9.setObjectName("gridLayout_9")
+        self.tableOrder = QtWidgets.QTableWidget(self.tab_orders)
+
+        #esta es la tabla
+        self.tableOrder.setColumnCount(6)
+        self.tableOrder.setObjectName("tableOrder")
+        self.tableOrder.setRowCount(0)
+        header = self.tableOrder.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.Stretch)
+        header.setSectionResizeMode(3, QHeaderView.Stretch)
+        header.setSectionResizeMode(4, QHeaderView.Stretch)
+        header.setSectionResizeMode(5, QHeaderView.Stretch)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableOrder.setHorizontalHeaderItem(0, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableOrder.setHorizontalHeaderItem(1, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableOrder.setHorizontalHeaderItem(2, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableOrder.setHorizontalHeaderItem(3, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableOrder.setHorizontalHeaderItem(4, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableOrder.setHorizontalHeaderItem(5, item)
+        self.gridLayout_9.addWidget(self.tableOrder, 10, 10, 10, 10)
+        
+        self.tabWidget.addTab(self.tab_orders, "")
+        
+        self.tableOrder.verticalHeader().setVisible(False)
+
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
@@ -1077,7 +1113,7 @@ class Ui_MainWindow(object):
         self.credit = 0
         self.account_email = ""
         self.cargar_credenciales()
-        self.tabWidget.removeTab(4)
+        self.tabWidget.removeTab(6)
         self.tabWidget.setCurrentIndex(0)
 
         self.retranslateUi(MainWindow)
@@ -1118,6 +1154,8 @@ class Ui_MainWindow(object):
         item.setText(_translate("MainWindow", "ID"))
         item = self.tableSearch.horizontalHeaderItem(4)
         item.setText(_translate("MainWindow", "Estado"))
+        item = self.tableSearch.horizontalHeaderItem(5)
+        item.setText(_translate("MainWindow", "Precio"))
         self.tableSearch.resizeColumnsToContents()
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_search), _translate("MainWindow", "Busqueda"))
         item = self.tableHistory.horizontalHeaderItem(0)
@@ -1134,6 +1172,24 @@ class Ui_MainWindow(object):
         item.setText(_translate("MainWindow", "Estado"))
         self.tableHistory.resizeColumnsToContents()
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_history), _translate("MainWindow", "Historial de prestamos"))
+
+        #LO MISMO DE ARRIBA
+
+        item = self.tableOrder.horizontalHeaderItem(0)
+        item.setText(_translate("MainWindow", "Titulo"))
+        item = self.tableOrder.horizontalHeaderItem(1)
+        item.setText(_translate("MainWindow", "Autor"))
+        item = self.tableOrder.horizontalHeaderItem(2)
+        item.setText(_translate("MainWindow", "Genero"))
+        item = self.tableOrder.horizontalHeaderItem(3)
+        item.setText(_translate("MainWindow", "Calificación"))
+        item = self.tableOrder.horizontalHeaderItem(4)
+        item.setText(_translate("MainWindow", "Precio"))
+        item = self.tableOrder.horizontalHeaderItem(5)
+        item.setText(_translate("MainWindow", "Fecha de compra"))
+        self.tableOrder.resizeColumnsToContents()
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_orders), _translate("MainWindow", "Historial de compras"))
+
         self.btnCancelar.setText(_translate("MainWindow", "Cancelar reserva"))
         self.btnDevolver.setText(_translate("MainWindow", "Devolver libro"))
         item = self.tableMyBooks.horizontalHeaderItem(0)
@@ -1162,7 +1218,6 @@ class Ui_MainWindow(object):
         self.btnLogout.setText(_translate("MainWindow", "  Cerrar Sesión"))
         self.btnPay.setText(_translate("MainWindow", "   Pagar Saldo"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_user), _translate("MainWindow", "Datos de usuario"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_order), _translate("MainWindow", "Historial de compras"))
 
     def registrarse(self):
         ventana_registro = VentanaRegistro()
@@ -1320,7 +1375,7 @@ class Ui_MainWindow(object):
                 for row_number, row_data in enumerate(cur):
                     self.tableSearch.insertRow(row_number)
                     # Ajusta el orden de los datos para mostrarlos en la tabla
-                    data_order = [3, 1, 4, 0, 2]  # Orden de las columnas: titulo, autor, genero, id, estado
+                    data_order = [3, 1, 4, 0, 2, 6]  # Orden de las columnas: titulo, autor, genero, id, estado
                     for column_number, index in enumerate(data_order):
                         if index == 2:  # Si la columna es la del estado
                             estado = "Disponible" if row_data[index] == 1 else "No disponible"
@@ -1433,6 +1488,7 @@ class Ui_MainWindow(object):
         id_libro = self.tableSearch.item(selected_row, 3).text()  # ID del libro
         disponibilidad = self.tableSearch.item(selected_row, 4).text()  # Disponibilidad del libro
         titulo = self.tableSearch.item(selected_row, 0).text()  # Título del libro
+        precio = self.tableSearch.item(selected_row, 5).text()  # Título del libro
 
         if selected_row < 0:
             QtWidgets.QMessageBox.critical(None, "Error", "Selecciona un libro para comprar")
@@ -1448,7 +1504,7 @@ class Ui_MainWindow(object):
         if reply != QMessageBox.Ok:
             return
         
-        pago = VentanaPago("", "", "")
+        pago = VentanaPago("", precio, "")
         pago.exec_()
 
         if pago.payBook():
@@ -1594,6 +1650,40 @@ class Ui_MainWindow(object):
         else:
             QtWidgets.QMessageBox.information(None, "Información", "No tienes historial de préstamos.")
 
+    def show_orders(self):
+        # Limpiar la tabla
+        self.tableOrder.clearContents()
+        self.tableOrder.setRowCount(0)
+        if self.account_id == 0:
+            QtWidgets.QMessageBox.critical(None, "Error", "Debes iniciar sesión para ver tu historial.")
+            return
+        # Obtener el historial del usuario actual
+        query = "SELECT l.titulo, l.autor, l.genero, l.calificacion, l.precio, DATE(o.fecha) FROM orden o JOIN libro l ON o.id_libro = l.id WHERE o.id_usuario = ?"
+        values = (self.account_id,)
+        cur = self.consulta(query, values)
+        if cur.rowcount > 0:
+            for row_number, row_data in enumerate(cur):
+                self.tableOrder.insertRow(row_number)
+                for column_number, data in enumerate(row_data):
+                    item = QTableWidgetItem(str(data))
+                    item.setTextAlignment(QtCore.Qt.AlignCenter)
+                    # Insertar el item en la tabla
+                    self.tableOrder.setItem(row_number, column_number, item)
+            
+            self.tableOrder.resizeColumnsToContents()
+            header = self.tableOrder.horizontalHeader()
+            header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(4, QtWidgets.QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(5, QtWidgets.QHeaderView.ResizeToContents)
+            self.tableOrder.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+            self.tableOrder.horizontalHeader().setStretchLastSection(True)
+            
+        else:
+            QtWidgets.QMessageBox.information(None, "Información", "No tienes historial de préstamos.")
+
     # Cancelar un préstamo
     def cancelar_reserva(self):
         # Obtener el índice de la fila seleccionada
@@ -1689,6 +1779,8 @@ class Ui_MainWindow(object):
         elif self.tabWidget.currentIndex() == 1:
             self.actualizar_historial()
         elif self.tabWidget.currentIndex() == 3:
+            self.show_orders()
+        elif self.tabWidget.currentIndex() == 4:
             self.actualizar_usuario()
 
     # Actualizar el crédito del usuario
