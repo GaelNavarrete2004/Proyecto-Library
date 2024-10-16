@@ -2,14 +2,15 @@ from email.message import EmailMessage
 import subprocess
 from cryptography.fernet import Fernet, InvalidToken
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import (QMainWindow, QPushButton, QVBoxLayout, 
+from PyQt5.QtWidgets import (QPushButton, QVBoxLayout, 
                              QLineEdit, QLabel, QDialog, QDesktopWidget, 
-                             QMessageBox, QTableWidget, QTableWidgetItem, 
+                             QMessageBox, QTableWidgetItem, 
                              QHeaderView, QComboBox, QHBoxLayout)
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt
 from datetime import datetime, timedelta
-import json, os, ssl, smtplib, sys, mariadb, re
+import json, os, ssl, smtplib, sys, re, mariadb
+from Database import conectar
 
 # Datos para enviar correos electrónicos
 password = "gvqr gzpl irqn mqzk"            # Contraseña de app generada para el correo electrónico
@@ -179,20 +180,6 @@ class VentanaPago(QDialog):
         # Movemos la ventana al centro de la pantalla
         qr.moveCenter(cp)
         self.move(qr.topLeft())
-        
-    def conectar(self):
-        try:
-            conn = mariadb.connect(
-                user="libraryPy",
-                password="michoacan",
-                host="64.23.180.219",
-                port=3306,
-                database="biblioteca"
-            )
-            return conn
-        except Exception as e:
-            print("Error al conectar con la base de datos:", e)
-            return None
 
     def luhn_check(self, tarjeta):
 
@@ -229,7 +216,7 @@ class VentanaPago(QDialog):
             QtWidgets.QMessageBox.critical(None, "Error", "Número de tarjeta inválido según la verificación de Luhn.")
             return
         # Realizar el pago y actualizar la base de datos
-        conn = self.conectar()
+        conn = conectar()
         if conn:
             try:
                 cursor = conn.cursor()
@@ -272,6 +259,30 @@ Gracias por tu preferencia.
     
         # Cerrar la ventana de pago
         self.accept()
+
+    def payBook(self):
+        # Obtener los datos ingresados por el usuario
+        nombre = self.inputNombre.text()
+        tarjeta = self.inputTarjeta.text().replace(" ", "")
+        mes_vencimiento = self.comboMes.currentText()
+        año_vencimiento = self.comboAño.currentText()
+        # Verificar si el nombre es válido
+        if not nombre:
+            QtWidgets.QMessageBox.critical(None, "Error", "Por favor, ingrese el nombre del beneficiario.")
+            return
+        # Verificar si la tarjeta es válida (solo números y longitud de 16)
+        if not re.match("^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{4}$", tarjeta):
+            QtWidgets.QMessageBox.critical(None, "Error", "Número de tarjeta inválido.")
+            return
+        # Validar el número de la tarjeta utilizando el algoritmo de Luhn
+        if not self.luhn_check(tarjeta):
+            QtWidgets.QMessageBox.critical(None, "Error", "Número de tarjeta inválido según la verificación de Luhn.")
+            return
+
+        # Cerrar la ventana de pago
+        self.accept()
+
+        return True
 
 class VentanaRegistro(QDialog):
     def __init__(self):
@@ -372,21 +383,6 @@ class VentanaRegistro(QDialog):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-    # Método para conectar a la base de datos
-    def conectar(self):
-        try:
-            conn = mariadb.connect(
-                user="libraryPy",
-                password="michoacan",
-                host="64.23.180.219",
-                port=3306,
-                database="biblioteca"
-            )
-            return conn
-        except Exception as e:
-            print("Error al conectar con la base de datos:", e)
-            return None
-
     # Método para validar el correo electrónico
     def validarcorreo(self, txtAValidar):
         x=re.search("^[\w\.-]+@[a-zA-Z\d\.-]+\.[a-zA-Z]{2,}$", txtAValidar)
@@ -447,7 +443,7 @@ class VentanaRegistro(QDialog):
     # Ejecutar una consulta en la base de datos
     def ejecutar_query(self, query, values):
         try:
-            conn = self.conectar()
+            conn = conectar()
             cur = conn.cursor()
             cur.execute(query, values)
             conn.commit()
@@ -570,6 +566,16 @@ class Ui_MainWindow(object):
         self.btnReservar.setObjectName("btnReservar")
         self.gridLayout_3.addWidget(self.btnReservar, 6, 3, 1, 1)
         self.btnReservar.clicked.connect(self.reservar)
+
+        self.btnComprar = QtWidgets.QPushButton(self.tab_search)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        font.setBold(False)
+        font.setWeight(50)
+        self.btnComprar.setFont(font)
+        self.btnComprar.setObjectName("btnComprar")
+        self.gridLayout_3.addWidget(self.btnComprar, 6, 2, 1, 1)
+        self.btnComprar.clicked.connect(self.comprar)
                 
         self.label = QtWidgets.QLabel(self.tab_search)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
@@ -1079,7 +1085,8 @@ class Ui_MainWindow(object):
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.searchBar, self.btnSearchAutor)
         MainWindow.setTabOrder(self.btnSearchAutor, self.btnSearchGenre)
-        MainWindow.setTabOrder(self.btnSearchGenre, self.btnReservar)
+        MainWindow.setTabOrder(self.btnSearchGenre, self.btnComprar)
+        MainWindow.setTabOrder(self.btnComprar, self.btnReservar)
         MainWindow.setTabOrder(self.btnReservar, self.btnCancelar)
         MainWindow.setTabOrder(self.btnCancelar, self.btnDevolver)
         MainWindow.setTabOrder(self.btnDevolver, self.btnLogin)
@@ -1095,6 +1102,7 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", f"LibraryPy - {version}"))
         icon = os.path.join(script_dir, 'imagenes/icon.ico').replace("\\", "/")
         MainWindow.setWindowIcon(QIcon(icon))
+        self.btnComprar.setText(_translate("MainWindow", "Comprar"))
         self.btnReservar.setText(_translate("MainWindow", "Reservar"))
         self.btnSearchAutor.setText(_translate("MainWindow", "   Buscar autor"))
         self.btnSearchTitle.setText(_translate("MainWindow", "    Buscar título"))
@@ -1154,6 +1162,7 @@ class Ui_MainWindow(object):
         self.btnLogout.setText(_translate("MainWindow", "  Cerrar Sesión"))
         self.btnPay.setText(_translate("MainWindow", "   Pagar Saldo"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_user), _translate("MainWindow", "Datos de usuario"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_order), _translate("MainWindow", "Historial de compras"))
 
     def registrarse(self):
         ventana_registro = VentanaRegistro()
@@ -1164,20 +1173,6 @@ class Ui_MainWindow(object):
                 print("ID del usuario insertado:", usuario_id)
                 self.account_id = usuario_id
 
-    def conectar(self):
-        try:
-            conn = mariadb.connect(
-                user="libraryPy",
-                password="michoacan",
-                host="64.23.180.219",
-                port=3306,
-                database="biblioteca"
-            )
-            return conn
-        except Exception as e:
-            print("Error al conectar con la base de datos:", e)
-            return None
-
     def iniciar_sesion(self, showMessage):
         email = self.inputEmail.text()
         contraseña = self.inputPassword.text()
@@ -1187,7 +1182,7 @@ class Ui_MainWindow(object):
             return
 
         try:
-            conn = self.conectar()
+            conn = conectar()
             cur = conn.cursor()
             cur.execute("SELECT id, name, last_name1, last_name2, credit, email FROM usuarios WHERE email = ? AND password = ?", (email, contraseña))
             usuario = cur.fetchone()
@@ -1363,7 +1358,7 @@ class Ui_MainWindow(object):
     # Método para realizar una consulta en la base de datos
     def consulta(self, query, values=None):
         try:
-            conn = self.conectar()
+            conn = conectar()
             if conn:
                 cur = conn.cursor()
                 if values:
@@ -1427,11 +1422,55 @@ class Ui_MainWindow(object):
                 QtWidgets.QMessageBox.critical(None, "Error", "El libro seleccionado no está disponible.")
         else:
             QtWidgets.QMessageBox.critical(None, "Error", "Selecciona un libro para reservar.")
+    
+    def comprar(self):
+        if self.account_id == 0:
+            QtWidgets.QMessageBox.critical(None, "Error", "Debes iniciar sesión para reservar un libro.")
+            return
+        
+        selected_row = self.tableSearch.currentRow()
+
+        id_libro = self.tableSearch.item(selected_row, 3).text()  # ID del libro
+        disponibilidad = self.tableSearch.item(selected_row, 4).text()  # Disponibilidad del libro
+        titulo = self.tableSearch.item(selected_row, 0).text()  # Título del libro
+
+        if selected_row < 0:
+            QtWidgets.QMessageBox.critical(None, "Error", "Selecciona un libro para comprar")
+            return
+
+        if disponibilidad == 'No disponible':
+            QtWidgets.QMessageBox.critical(None, "Error", "No hay libros disponibles para comprar")
+            return
+        
+        reply = QMessageBox.question(None, 'Comprar libro', 'Confirmar compra del libro: ' + titulo,
+                    QMessageBox.Ok | QMessageBox.Cancel, QMessageBox.Cancel)
+        
+        if reply != QMessageBox.Ok:
+            return
+        
+        pago = VentanaPago("", "", "")
+        pago.exec_()
+
+        if pago.payBook():
+
+            fecha_compra = datetime.now().strftime('%Y-%m-%d')
+            id_usuario = self.account_id
+
+            query = "INSERT INTO orden (id_usuario, id_libro, fecha) VALUES (?, ?, ?)"
+            values = (id_usuario, id_libro, fecha_compra)
+            self.ejecutar_query(query, values)
+
+            query = "UPDATE libro SET disponibilidad = disponibilidad - 1 WHERE id = ?"
+            values = (id_libro,)
+            self.ejecutar_query(query, values)
+
+            QtWidgets.QMessageBox.information(None, "Información", "Libro comprado con éxito.")
+        
 
     # Método para ejecutar una consulta en la base de datos
     def ejecutar_query(self, query, values):
         try:
-            conn = self.conectar()
+            conn = conectar()
             if conn:
                 cur = conn.cursor()
                 cur.execute(query, values)
@@ -1458,7 +1497,7 @@ class Ui_MainWindow(object):
     # Método para insertar un nuevo registro en la base de datos
     def insertar(self, query, values):
         try:
-            conn = self.conectar()
+            conn = conectar()
             if conn:
                 cur = conn.cursor()
                 cur.execute(query, values)
