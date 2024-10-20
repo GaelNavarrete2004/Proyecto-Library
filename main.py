@@ -4,8 +4,10 @@ from cryptography.fernet import Fernet, InvalidToken
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import (QPushButton, QVBoxLayout, 
                              QLineEdit, QLabel, QDialog, QDesktopWidget, 
-                             QMessageBox, QTableWidgetItem, 
-                             QHeaderView, QComboBox, QHBoxLayout)
+
+                             QMessageBox, QTableWidget, QTableWidgetItem, 
+                             QHeaderView, QComboBox, QHBoxLayout, QDoubleSpinBox, QTextEdit)
+
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt
 from datetime import datetime, timedelta
@@ -52,6 +54,145 @@ def abrir_directorio():
 
 # Quitar comentario para abrir el directorio
 # abrir_directorio()
+
+class VentanaCalificar(QDialog):
+    def __init__(self, id_libro, titulo_libro, account_id, parent=None):
+        super().__init__(parent)
+        self.id_libro = id_libro
+        self.titulo_libro = titulo_libro
+        self.account_id = account_id
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle("Calificar libro")
+        self.setFixedSize(500, 250)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+
+        # Aplicamos un nuevo estilo CSS
+        self.setStyleSheet("""
+            QWidget {
+                background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #dac8ae, stop:1 #eae1d0);
+                color: #111111;
+                font-family: 'Arial', sans-serif;
+                font-size: 14px;
+            }
+
+            QPushButton {
+                background-color: #EFDECD;
+                color: #1A1110;
+                border: 2px solid #1A1110;
+                border-radius: 8px;
+                padding: 8px;
+                transition: background-color 0.3s ease;
+            }
+
+            QPushButton:hover {
+                background-color: #CC7722;
+                border-color: #8B4513;
+            }
+
+            QLineEdit, QDoubleSpinBox {
+                background-color: #FFFFFF;
+                color: #111111;
+                border: 2px solid #00416A;
+                padding: 6px;
+                border-radius: 5px;
+            }
+
+            QLabel {
+                color: #1A1110;
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+        """)
+
+        # Añadimos los elementos visuales
+        self.labelTitulo = QLabel(self)
+        self.labelTitulo.setText(f"Libro: {self.titulo_libro}")
+        self.labelTitulo.setAlignment(Qt.AlignCenter)
+
+        self.labelCalificacion = QLabel(self)
+        self.labelCalificacion.setText("Calificación (0.0 - 5.0):")
+
+        # Cambiamos QComboBox por QDoubleSpinBox para permitir decimales
+        self.spinCalificacion = QDoubleSpinBox(self)
+        self.spinCalificacion.setRange(0.0, 5.0)  # Rango entre 0.0 y 5.0
+        self.spinCalificacion.setSingleStep(0.1)  # Incrementos de 0.1
+        self.spinCalificacion.setDecimals(1)  # Mostrar solo un decimal
+        
+        self.labelReseña = QLabel(self)
+        self.labelReseña.setText("Escribe una reseña:")
+
+        # Campo para escribir la reseña
+        self.textReseña = QTextEdit(self)
+        self.textReseña.setPlaceholderText("Escribe tu reseña aquí...")
+
+        # Mejoramos el botón "Calificar"
+        self.btnCalificar = QPushButton("Calificar y Reseñar", self)
+        self.btnCalificar.setIcon(QIcon("icono_calificar.png"))  # Agrega un ícono si lo deseas
+        self.btnCalificar.setCursor(Qt.PointingHandCursor)
+        self.btnCalificar.clicked.connect(self.calificar)
+
+        # Disposición y espaciado
+        layout = QVBoxLayout()
+        layout.setSpacing(15)
+        layout.addWidget(self.labelTitulo)
+        layout.addWidget(self.labelCalificacion)
+        layout.addWidget(self.spinCalificacion)
+        layout.addWidget(self.labelReseña)
+        layout.addWidget(self.textReseña)  # Añadir el campo de texto para la reseña
+        layout.addWidget(self.btnCalificar)
+
+        self.setLayout(layout)
+        self.center()
+
+    def center(self):
+        """Centrar la ventana en la pantalla."""
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+        
+    def calificar(self):
+        """Función para calificar el libro."""
+        calificacion = self.spinCalificacion.value()  # Obtener el valor decimal del QDoubleSpinBox
+        reseña = self.textReseña.toPlainText()
+        conn = self.conectar()
+        if conn:
+            try:
+                cursor = conn.cursor()
+
+                # 1. Insertar la calificación del usuario en la tabla 'calificaciones'
+                cursor.execute(
+                    "INSERT INTO calificaciones (id_usuario, id_libro, calificacion, reseña) VALUES (?, ?, ?, ?)",
+                    ( self.id_libro, self.account_id, calificacion, reseña)  # Cambié el orden aquí
+                )
+                conn.commit()
+
+                # 2. Calcular el promedio de las calificaciones de este libro
+                cursor.execute("SELECT AVG(calificacion) FROM calificaciones WHERE id_libro = ?", (self.account_id,))
+                promedio_calificacion = cursor.fetchone()[0]
+
+                # 3. Actualizar el campo 'calificacion' en la tabla 'libros' con el nuevo promedio
+                cursor.execute("UPDATE libro SET calificacion = ? WHERE id = ?", (promedio_calificacion, self.account_id))
+                conn.commit()
+
+                # Mostrar un mensaje de éxito
+                QtWidgets.QMessageBox.information(self, "Calificación y Reseña", "Calificación realizada con éxito.")
+                self.accept()
+
+            except mariadb.Error as e:
+                print(f"Error al calificar el libro: {e}")
+            finally:
+                conn.close()
+        else:
+            QtWidgets.QMessageBox.critical(self, "Error", "No se pudo conectar a la base de datos.")
+
+        
+
+
+
+
 
 class VentanaPago(QDialog):
     def __init__(self, account_id, credit, account_email, main_window):
@@ -701,6 +842,7 @@ class Ui_MainWindow(object):
         header.setSectionResizeMode(2, QHeaderView.Stretch)
         header.setSectionResizeMode(3, QHeaderView.Stretch)
         header.setSectionResizeMode(4, QHeaderView.Stretch)
+        header.setSectionResizeMode(5, QHeaderView.Stretch)
         self.tableSearch.verticalHeader().setVisible(False)
         self.tableSearch.horizontalHeader().setVisible(True)
         self.tableSearch.horizontalHeader().setCascadingSectionResizes(False)
@@ -710,6 +852,7 @@ class Ui_MainWindow(object):
         self.tableSearch.verticalHeader().setSortIndicatorShown(False)
         self.gridLayout_3.addWidget(self.tableSearch, 5, 0, 1, 4)
         self.tabWidget.addTab(self.tab_search, "")
+        #end of tab_search
         self.tab_history = QtWidgets.QWidget()
         self.tab_history.setObjectName("tab_history")
         self.gridLayout_4 = QtWidgets.QGridLayout(self.tab_history)
@@ -738,8 +881,10 @@ class Ui_MainWindow(object):
         item = QtWidgets.QTableWidgetItem()
         self.tableHistory.setHorizontalHeaderItem(5, item)
         self.gridLayout_4.addWidget(self.tableHistory, 0, 0, 1, 1)
-        
+
         self.tabWidget.addTab(self.tab_history, "")
+        #end of tab_history
+
         self.tab_mybooks = QtWidgets.QWidget()
         
         self.tab_mybooks.setObjectName("tab_mybooks")
@@ -747,7 +892,7 @@ class Ui_MainWindow(object):
         self.gridLayout_2.setObjectName("gridLayout_2")
         
         self.tableMyBooks = QtWidgets.QTableWidget(self.tab_mybooks)
-        self.tableMyBooks.setColumnCount(7)
+        self.tableMyBooks.setColumnCount(8)
         self.tableMyBooks.setObjectName("tableWidget")
         self.tableMyBooks.setRowCount(0)
         header = self.tableMyBooks.horizontalHeader()
@@ -758,6 +903,7 @@ class Ui_MainWindow(object):
         header.setSectionResizeMode(4, QHeaderView.Stretch)
         header.setSectionResizeMode(5, QHeaderView.Stretch)
         header.setSectionResizeMode(6, QHeaderView.Stretch)
+        header.setSectionResizeMode(7, QHeaderView.Stretch)
         item = QtWidgets.QTableWidgetItem()
         self.tableMyBooks.setHorizontalHeaderItem(0, item)
         item = QtWidgets.QTableWidgetItem()
@@ -772,7 +918,9 @@ class Ui_MainWindow(object):
         self.tableMyBooks.setHorizontalHeaderItem(5, item)
         item = QtWidgets.QTableWidgetItem()
         self.tableMyBooks.setHorizontalHeaderItem(6, item)
-        self.gridLayout_2.addWidget(self.tableMyBooks, 0, 0, 1, 2)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableMyBooks.setHorizontalHeaderItem(7, item)
+        self.gridLayout_2.addWidget(self.tableMyBooks, 0, 0, 1, 3)
         
         
         self.tabWidget.currentChanged.connect(self.tab_changed)
@@ -789,6 +937,11 @@ class Ui_MainWindow(object):
         self.btnDevolver.setObjectName("btnDevolver")
         self.gridLayout_2.addWidget(self.btnDevolver, 1, 1, 1, 1)
         self.btnDevolver.clicked.connect(self.devolver_reserva)
+
+        self.btnCalificar = QtWidgets.QPushButton(self.tab_mybooks)
+        self.btnCalificar.setObjectName("btnCalificar")
+        self.gridLayout_2.addWidget(self.btnCalificar, 1, 2, 1, 1)
+        self.btnCalificar.clicked.connect(self.calificar)
         
         
         self.tabWidget.addTab(self.tab_mybooks, "")
@@ -1110,6 +1263,49 @@ class Ui_MainWindow(object):
         
         self.tabWidget.addTab(self.tab_user, "")
 
+        #aqui empieza el tab de calificacion
+        self.tab_calification = QtWidgets.QWidget()
+        self.tab_calification.setObjectName("tab_calification")
+        self.gridLayout_7 = QtWidgets.QGridLayout(self.tab_calification)
+        self.gridLayout_7.setObjectName("gridLayout_7")
+
+        self.label = QtWidgets.QLabel(self.tab_calification)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy)
+        self.label.setMaximumSize(QtCore.QSize(25, 25))
+        self.label.setText("")
+        self.label.setPixmap(QtGui.QPixmap("imagenes/lupa1.png"))
+        self.label.setScaledContents(True)
+        self.label.setObjectName("label")
+        self.gridLayout_7.addWidget(self.label, 0, 0, 1, 1) 
+
+        self.searchBar2 = QtWidgets.QLineEdit(self.tab_calification)
+        self.searchBar2.setText("")
+        self.searchBar2.setObjectName("lineEdit")
+        self.gridLayout_7.addWidget(self.searchBar2, 0, 1, 1, 3)
+        self.searchBar2.returnPressed.connect(self.searchReview)       
+
+        self.tableCalification = QtWidgets.QTableWidget(self.tab_calification)
+        self.tableCalification.setColumnCount(3)
+        self.tableCalification.setObjectName("tableCalification")
+        self.tableCalification.setRowCount(0)
+        header = self.tableCalification.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.Stretch)
+        self.tableCalification.verticalHeader().setVisible(False)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableCalification.setHorizontalHeaderItem(0, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableCalification.setHorizontalHeaderItem(1, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableCalification.setHorizontalHeaderItem(2, item)
+        self.gridLayout_7.addWidget(self.tableCalification, 1, 0, 1, 4)
+        self.tabWidget.addTab(self.tab_calification, "")
+
                 #CLON DE HISTORIAL DE PRESTAMOS, SI SALE ALGO MAL ES CULPA DE DANI
         self.tab_orders = QtWidgets.QWidget()
         self.tab_orders.setObjectName("tab_order")
@@ -1201,6 +1397,7 @@ class Ui_MainWindow(object):
         item = self.tableSearch.horizontalHeaderItem(4)
         item.setText(_translate("MainWindow", "Estado"))
         item = self.tableSearch.horizontalHeaderItem(5)
+        item.setText(_translate("MainWindow", "Calificación"))
         item.setText(_translate("MainWindow", "Precio"))
         self.tableSearch.resizeColumnsToContents()
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_search), _translate("MainWindow", "Busqueda"))
@@ -1238,6 +1435,7 @@ class Ui_MainWindow(object):
 
         self.btnCancelar.setText(_translate("MainWindow", "Cancelar reserva"))
         self.btnDevolver.setText(_translate("MainWindow", "Devolver libro"))
+        self.btnCalificar.setText(_translate("MainWindow", "Calificar libro"))
         item = self.tableMyBooks.horizontalHeaderItem(0)
         item.setText(_translate("MainWindow", "ID"))
         item = self.tableMyBooks.horizontalHeaderItem(1)
@@ -1252,6 +1450,8 @@ class Ui_MainWindow(object):
         item.setText(_translate("MainWindow", "Fecha de devolución"))
         item = self.tableMyBooks.horizontalHeaderItem(6)
         item.setText(_translate("MainWindow", "Estado"))
+        item = self.tableMyBooks.horizontalHeaderItem(7)
+        item.setText(_translate("MainWindow", "Mi Calificación"))
         self.tableMyBooks.resizeColumnsToContents()
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_mybooks), _translate("MainWindow", "Mis libros"))
         self.label_2.setText(_translate("MainWindow", "Iniciar Sesión"))
@@ -1264,6 +1464,16 @@ class Ui_MainWindow(object):
         self.btnLogout.setText(_translate("MainWindow", "  Cerrar Sesión"))
         self.btnPay.setText(_translate("MainWindow", "   Pagar Saldo"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_user), _translate("MainWindow", "Datos de usuario"))
+        self.searchBar2.setPlaceholderText(_translate("MainWindow", "ID del libro a buscar"))
+        item = self.tableCalification.horizontalHeaderItem(0)
+        item.setText(_translate("MainWindow", "Título"))
+        item = self.tableCalification.horizontalHeaderItem(1)
+        item.setText(_translate("MainWindow", "Reseña"))
+        item = self.tableCalification.horizontalHeaderItem(2)
+        item.setText(_translate("MainWindow", "Calificación"))
+        self.tableCalification.resizeColumnsToContents()
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_calification), _translate("MainWindow", "Calificaciones"))
+
 
     def registrarse(self):
         ventana_registro = VentanaRegistro()
@@ -1391,6 +1601,14 @@ class Ui_MainWindow(object):
         else:
             QtWidgets.QMessageBox.critical(None, "Error", "Primero escribe algo en el buscador.")
 
+    def searchReview(self):
+        id_libro = self.searchBar2.text()
+        if id_libro:
+            query = f"SELECT libro.titulo, calificaciones.reseña, calificaciones.calificacion FROM libro INNER JOIN calificaciones ON libro.id = calificaciones.id_libro WHERE libro.id = {id_libro}"
+            self.mostrar_resultados_review(query, "ID", id_libro)
+        else:
+            QtWidgets.QMessageBox.critical(None, "Error", "Primero escribe algo en el buscador.")
+
     # Busqueda por autor
     def searchAuthor(self):
         author = self.searchBar.text()
@@ -1409,6 +1627,43 @@ class Ui_MainWindow(object):
         else:
             QtWidgets.QMessageBox.critical(None, "Error", "Primero escribe algo en el buscador.")
 
+    def mostrar_resultados_review(self, query, tipo_busqueda, busqueda):
+        try:
+            self.tableCalification.clearContents()
+            self.tableCalification.setRowCount(0)
+            
+            cur = self.consulta(query)
+            if cur:
+                found = False
+                for row_number, row_data in enumerate(cur):
+                    self.tableCalification.insertRow(row_number)
+                    # Ajusta el orden de los datos para mostrarlos en la tabla
+                    data_order = [0, 1, 2]  # Orden de las columnas: titulo, reseña, calificacion
+                    for column_number, index in enumerate(data_order):
+                        item = QTableWidgetItem(str(row_data[index]))
+                        # Establecer el hint para mostrar el texto completo cuando el mouse pasa sobre la celda
+                        item.setToolTip(str(row_data[index]))
+                        self.tableCalification.setItem(row_number, column_number, item)
+                    found = True
+                    
+                self.tableCalification.resizeColumnsToContents()
+                
+                if not found:
+                    QtWidgets.QMessageBox.information(None, "Información", f"No se encontraron resultados para el {tipo_busqueda} '{busqueda}'.")
+                    
+                # Aquí ajustamos el tamaño de las columnas y la tabla
+                header = self.tableCalification.horizontalHeader()
+                header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)  # Estirar la columna "Título"
+                header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)  # Columna "Reseña"
+                header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)  # Columna "Calificación"
+                self.tableCalification.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+                self.tableCalification.horizontalHeader().setStretchLastSection(True)
+                
+            else:
+                QtWidgets.QMessageBox.information(None, "Información", f"No se encontraron resultados para el {tipo_busqueda} '{busqueda}'.")
+        except Exception as e:
+            print("Error al mostrar resultados:", e)
+
     # Método para mostrar los resultados de la búsqueda
     def mostrar_resultados(self, query, tipo_busqueda, busqueda):
         try:
@@ -1421,7 +1676,8 @@ class Ui_MainWindow(object):
                 for row_number, row_data in enumerate(cur):
                     self.tableSearch.insertRow(row_number)
                     # Ajusta el orden de los datos para mostrarlos en la tabla
-                    data_order = [3, 1, 4, 0, 2, 6]  # Orden de las columnas: titulo, autor, genero, id, estado
+                    data_order = [3, 1, 4, 0, 2, 5]  # Orden de las columnas: titulo, autor, genero, id, estado, calificacion
+
                     for column_number, index in enumerate(data_order):
                         if index == 2:  # Si la columna es la del estado
                             estado = "Disponible" if row_data[index] == 1 else "No disponible"
@@ -1448,6 +1704,7 @@ class Ui_MainWindow(object):
                 header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)  # Columna "Autor"
                 header.setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeToContents)  # Columna "ID Libro"
                 header.setSectionResizeMode(4, QtWidgets.QHeaderView.ResizeToContents)  # Columna "Estado"
+                header.setSectionResizeMode(5, QtWidgets.QHeaderView.ResizeToContents)
                 self.tableSearch.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
                 self.tableSearch.horizontalHeader().setStretchLastSection(True)
                 
@@ -1621,7 +1878,7 @@ class Ui_MainWindow(object):
             QtWidgets.QMessageBox.critical(None, "Error", "Debes iniciar sesión para ver tus libros.")
             return
         # Obtener los préstamos del usuario actual
-        query = "SELECT prestamo.id, libro.titulo, libro.autor, libro.id, prestamo.fecha_prestamo, prestamo.fecha_devolucion, prestamo.devuelto FROM prestamo INNER JOIN libro ON prestamo.id_libro = libro.id WHERE prestamo.id_usuario = ?"
+        query = "SELECT prestamo.id, libro.titulo, libro.autor, libro.id, prestamo.fecha_prestamo, prestamo.fecha_devolucion, prestamo.devuelto, libro.calificacion FROM prestamo INNER JOIN libro ON prestamo.id_libro = libro.id WHERE prestamo.id_usuario = ?"
         values = (self.account_id)
         cur = self.consulta(query, values)
         if cur.rowcount > 0:
@@ -1648,6 +1905,7 @@ class Ui_MainWindow(object):
             header.setSectionResizeMode(4, QtWidgets.QHeaderView.ResizeToContents)
             header.setSectionResizeMode(5, QtWidgets.QHeaderView.ResizeToContents)
             header.setSectionResizeMode(6, QtWidgets.QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(7, QtWidgets.QHeaderView.ResizeToContents)
             self.tableMyBooks.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
             self.tableMyBooks.horizontalHeader().setStretchLastSection(True)
             
@@ -1938,7 +2196,17 @@ Gracias por tu preferencia.
                 self.sancion_aplicada = True  # Actualizar la bandera después de llamar a sancionar_usuarios
             ventana_pago.exec_()
 
-    def sancionar_usuarios(self):
+    def calificar(self):
+        selected_row = self.tableMyBooks.currentRow()
+        if selected_row >= 0:
+            titulo_libro = self.tableMyBooks.item(selected_row, 1).text()  # Nombre del libro
+            id_libro = int(self.tableMyBooks.item(selected_row, 3).text()) 
+            ventana_calificar = VentanaCalificar(self.account_id, titulo_libro, id_libro)
+            ventana_calificar.exec_()
+        else:
+            QtWidgets.QMessageBox.critical(None, "Error", "Selecciona un libro para calificar.")
+
+            def sancionar_usuarios(self):
         try:
             conn = self.conectar()
             if conn:
