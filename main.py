@@ -196,6 +196,28 @@ class VentanaPago(QDialog):
         checksum = sum(digits)
 
         return checksum % 10 == 0
+
+    def payBook(self):
+        # Obtener los datos ingresados por el usuario
+        nombre = self.inputNombre.text()
+        tarjeta = self.inputTarjeta.text().replace(" ", "")
+        # Verificar si el nombre es válido
+        if not nombre:
+            QtWidgets.QMessageBox.critical(None, "Error", "Por favor, ingrese el nombre del beneficiario.")
+            return
+        # Verificar si la tarjeta es válida (solo números y longitud de 16)
+        if not re.match("^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{4}$", tarjeta):
+            QtWidgets.QMessageBox.critical(None, "Error", "Número de tarjeta inválido.")
+            return
+        # Validar el número de la tarjeta utilizando el algoritmo de Luhn
+        if not self.luhn_check(tarjeta):
+            QtWidgets.QMessageBox.critical(None, "Error", "Número de tarjeta inválido según la verificación de Luhn.")
+            return
+
+        # Cerrar la ventana de pago
+        self.accept()
+
+        return True
     
     def pay(self):
         # Obtener los datos ingresados por el usuario
@@ -256,30 +278,6 @@ Gracias por tu preferencia.
     
         # Cerrar la ventana de pago
         self.accept()
-
-    def payBook(self):
-        # Obtener los datos ingresados por el usuario
-        nombre = self.inputNombre.text()
-        tarjeta = self.inputTarjeta.text().replace(" ", "")
-        mes_vencimiento = self.comboMes.currentText()
-        año_vencimiento = self.comboAño.currentText()
-        # Verificar si el nombre es válido
-        if not nombre:
-            QtWidgets.QMessageBox.critical(None, "Error", "Por favor, ingrese el nombre del beneficiario.")
-            return
-        # Verificar si la tarjeta es válida (solo números y longitud de 16)
-        if not re.match("^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{4}$", tarjeta):
-            QtWidgets.QMessageBox.critical(None, "Error", "Número de tarjeta inválido.")
-            return
-        # Validar el número de la tarjeta utilizando el algoritmo de Luhn
-        if not self.luhn_check(tarjeta):
-            QtWidgets.QMessageBox.critical(None, "Error", "Número de tarjeta inválido según la verificación de Luhn.")
-            return
-
-        # Cerrar la ventana de pago
-        self.accept()
-
-        return True
 
 class VentanaRegistro(QDialog):
     def __init__(self):
@@ -1658,7 +1656,7 @@ class Ui_MainWindow(object):
             QtWidgets.QMessageBox.critical(None, "Error", "Debes iniciar sesión para ver tu historial.")
             return
         # Obtener el historial del usuario actual
-        query = "SELECT l.titulo, l.autor, l.genero, l.calificacion, l.precio, DATE(o.fecha) FROM orden o JOIN libro l ON o.id_libro = l.id WHERE o.id_usuario = ?"
+        query = "SELECT l.titulo, l.autor, l.genero, l.calificacion, l.precio, o.fecha FROM orden o JOIN libro l ON o.id_libro = l.id WHERE o.id_usuario = ?"
         values = (self.account_id,)
         cur = self.consulta(query, values)
         if cur.rowcount > 0:
