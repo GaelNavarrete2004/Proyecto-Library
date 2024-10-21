@@ -157,7 +157,7 @@ class VentanaCalificar(QDialog):
         """Función para calificar el libro."""
         calificacion = self.spinCalificacion.value()  # Obtener el valor decimal del QDoubleSpinBox
         reseña = self.textReseña.toPlainText()
-        conn = self.conectar()
+        conn = conectar()
         if conn:
             try:
                 cursor = conn.cursor()
@@ -203,11 +203,6 @@ class VentanaPago(QDialog):
         self.main_window = main_window  # Almacena la referencia a la ventana principal
         self.sancion_aplicada = False
         self.init_ui()
-
-    def __init__(self, credit):
-        super().__init__()
-        self.credit = credit
-        self.init_ui2()
 
     def init_ui(self):
         # Título de la ventana
@@ -553,7 +548,7 @@ Gracias por tu preferencia.
 
     def sancionar_usuarios(self):
         try:
-            conn = self.conectar()
+            conn = conectar()
             if conn:
                 cursor = conn.cursor()
                 # Obtener solo el usuario que ha iniciado sesión
@@ -1931,7 +1926,7 @@ class Ui_MainWindow(object):
         if reply != QMessageBox.Ok:
             return
         
-        pago = VentanaPago(precio)
+        pago = VentanaPago(self.account_id, precio, self.account_email, self.main_window)
         pago.exec_()
 
         if pago.payBook():
@@ -2332,7 +2327,7 @@ Gracias por tu preferencia.
 
     def sancionar_usuarios(self):
         try:
-            conn = self.conectar()
+            conn = conectar()
             if conn:
                 cursor = conn.cursor()
                 # Obtener solo el usuario que ha iniciado sesión
