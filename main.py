@@ -366,7 +366,7 @@ class VentanaPago(QDialog):
         """)
         # Saldo pendiente
         self.labelCredit = QLabel(self)
-        self.labelCredit.setText(f"Costo de tu pene: ${self.credit}")
+        self.labelCredit.setText(f"Costo del libro: ${self.credit}")
         # Etiqueta para nombre del beneficiario
         self.labelNombre = QLabel(self)
         self.labelNombre.setText("Nombre del beneficiario:")
@@ -1915,7 +1915,7 @@ class Ui_MainWindow(object):
         id_libro = self.tableSearch.item(selected_row, 3).text()  # ID del libro
         disponibilidad = self.tableSearch.item(selected_row, 4).text()  # Disponibilidad del libro
         titulo = self.tableSearch.item(selected_row, 0).text()  # Título del libro
-        precio = self.tableSearch.item(selected_row, 5).text()  # Título del libro
+        precio = self.tableSearch.item(selected_row, 6).text()  # Título del libro
 
         if selected_row < 0:
             QtWidgets.QMessageBox.critical(None, "Error", "Selecciona un libro para comprar")
