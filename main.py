@@ -204,6 +204,11 @@ class VentanaPago(QDialog):
         self.sancion_aplicada = False
         self.init_ui()
 
+    def __init__(self, credit):
+        super().__init__()
+        self.credit = credit
+        self.init_ui2()
+
     def init_ui(self):
         # Título de la ventana
         self.setWindowTitle("Pagar")
@@ -314,6 +319,119 @@ class VentanaPago(QDialog):
 
         self.setLayout(layout)
         self.center()
+
+
+    def init_ui2(self):
+        # Título de la ventana
+        self.setWindowTitle("Pagar")
+        # Tamaño fijo de la ventana
+        self.setFixedSize(500, 500)
+        # Quitar el botón de ayuda
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        # Aplica la hoja de estilo a la ventana
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #DAC8AE;
+                color: #111111;
+            }
+
+            /* Estilo para los botones */
+            QPushButton {
+                background-color: #EFDECD;
+                color: #1A1110;
+                border: 2px solid #1A1110;
+                padding: 5px;
+            }
+
+            QPushButton:hover {
+                background-color: #CC7722;
+            }
+
+            /* Estilo para los cuadros de texto */
+            QLineEdit {
+                background-color: #FFFFFF;
+                color: #111111;
+                border: 1px solid #00416A;
+                padding: 4px;
+            }
+
+            QLineEdit:focus {
+                border: 2px solid #00416A;
+            }
+
+            /* Estilo para las etiquetas */
+            QLabel {
+                color: #1A1110;
+            }
+        """)
+        # Saldo pendiente
+        self.labelCredit = QLabel(self)
+        self.labelCredit.setText(f"Costo de tu pene: ${self.credit}")
+        # Etiqueta para nombre del beneficiario
+        self.labelNombre = QLabel(self)
+        self.labelNombre.setText("Nombre del beneficiario:")
+        self.inputNombre = QLineEdit(self)
+
+        # Etiqueta para numero de tarjeta
+        self.labelTarjeta = QLabel(self)
+        self.labelTarjeta.setText("Número de tarjeta:")
+        self.inputTarjeta = QLineEdit(self)
+        self.inputTarjeta.setInputMask("9999-9999-9999-9999")
+        
+        # Selector de mes
+        self.labelMes = QLabel(self)
+        self.labelMes.setText("Mes de vencimiento:")
+        self.comboMes = QComboBox(self)
+        self.comboMes.addItems(["01 - Enero", "02 - Febrero", "03 - Marzo", "04 - Abril", "05 - Mayo", "06 - Junio",
+                                "07 - Julio", "08 - Agosto", "09 - Septiembre", "10 - Octubre", "11 - Noviembre", "12 - Diciembre"])
+
+        # Selector de año
+        self.labelAño = QLabel(self)
+        self.labelAño.setText("Año de vencimiento:")
+        self.comboAño = QComboBox(self)
+        current_year = datetime.now().year
+        self.comboAño.addItems([str(año) for año in range(current_year, current_year+15)])
+
+        # Iconos de Visa y Mastercard
+        
+        image_visa = os.path.join(script_dir, "imagenes/visa.png")
+        image_master = os.path.join(script_dir, "imagenes/mastercard.png")
+        pixmap_visa = QPixmap(image_visa)
+        pixmap_mastercard = QPixmap(image_master)
+        self.labelVisa = QLabel(self)
+        self.labelVisa.setPixmap(pixmap_visa.scaledToHeight(30))
+        self.labelVisa.setAlignment(Qt.AlignCenter)
+        self.labelVisa.setScaledContents(True)
+        self.labelMastercard = QLabel(self)
+        self.labelMastercard.setPixmap(pixmap_mastercard.scaledToHeight(30))
+        self.labelMastercard.setAlignment(Qt.AlignCenter)
+        self.labelMastercard.setScaledContents(True)
+
+        # Layout para los iconos
+        icon_layout = QHBoxLayout()
+        icon_layout.addWidget(self.labelVisa)
+        icon_layout.addWidget(self.labelMastercard)
+        icon_layout.setAlignment(Qt.AlignCenter)
+
+        self.btnPay = QPushButton("Pagar", self)
+        self.btnPay.clicked.connect(self.payBook)
+
+        layout = QVBoxLayout()
+        layout.addLayout(icon_layout)
+        layout.addWidget(self.labelCredit)
+        layout.addWidget(self.labelNombre)
+        layout.addWidget(self.inputNombre)
+        layout.addWidget(self.labelTarjeta)
+        layout.addWidget(self.inputTarjeta)
+        layout.addWidget(self.labelMes)
+        layout.addWidget(self.comboMes)
+        layout.addWidget(self.labelAño)
+        layout.addWidget(self.comboAño)
+        layout.addWidget(self.btnPay)
+
+        self.setLayout(layout)
+        self.center()
+
 
     def center(self):
         # Obtenemos la geometría de la ventana principal
@@ -821,7 +939,7 @@ class Ui_MainWindow(object):
         self.tableSearch.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.tableSearch.setAlternatingRowColors(False)
         self.tableSearch.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        self.tableSearch.setColumnCount(6)
+        self.tableSearch.setColumnCount(7)
         self.tableSearch.setObjectName("tableSearch")
         self.tableSearch.setRowCount(0)
         item = QtWidgets.QTableWidgetItem()
@@ -836,6 +954,8 @@ class Ui_MainWindow(object):
         self.tableSearch.setHorizontalHeaderItem(4, item)
         item = QtWidgets.QTableWidgetItem()
         self.tableSearch.setHorizontalHeaderItem(5, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableSearch.setHorizontalHeaderItem(6, item)
         header = self.tableSearch.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
@@ -843,6 +963,7 @@ class Ui_MainWindow(object):
         header.setSectionResizeMode(3, QHeaderView.Stretch)
         header.setSectionResizeMode(4, QHeaderView.Stretch)
         header.setSectionResizeMode(5, QHeaderView.Stretch)
+        header.setSectionResizeMode(6, QHeaderView.Stretch)
         self.tableSearch.verticalHeader().setVisible(False)
         self.tableSearch.horizontalHeader().setVisible(True)
         self.tableSearch.horizontalHeader().setCascadingSectionResizes(False)
@@ -1072,8 +1193,7 @@ class Ui_MainWindow(object):
         self.label_11.setSizePolicy(sizePolicy)
         self.label_11.setMaximumSize(QtCore.QSize(300, 70))
         self.label_11.setAutoFillBackground(False)
-        self.label_11.setStyleSheet("opacity:0;\n"
-"")
+        self.label_11.setStyleSheet("opacity:0;\n""")
         self.label_11.setText("")
         self.label_11.setPixmap(QtGui.QPixmap("imagenes/trans.png"))
         self.label_11.setScaledContents(True)
@@ -1098,6 +1218,92 @@ class Ui_MainWindow(object):
         self.gridLayout_5.addWidget(self.inputPassword, 11, 2, 1, 1)
         self.inputPassword.returnPressed.connect(lambda: self.iniciar_sesion(True))
                 
+        
+
+        #aqui empieza el tab de calificacion
+        self.tab_calification = QtWidgets.QWidget()
+        self.tab_calification.setObjectName("tab_calification")
+        self.gridLayout_7 = QtWidgets.QGridLayout(self.tab_calification)
+        self.gridLayout_7.setObjectName("gridLayout_7")
+
+        self.label = QtWidgets.QLabel(self.tab_calification)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy)
+        self.label.setMaximumSize(QtCore.QSize(25, 25))
+        self.label.setText("")
+        self.label.setPixmap(QtGui.QPixmap("imagenes/lupa1.png"))
+        self.label.setScaledContents(True)
+        self.label.setObjectName("label")
+        self.gridLayout_7.addWidget(self.label, 0, 0, 1, 1) 
+
+        self.searchBar2 = QtWidgets.QLineEdit(self.tab_calification)
+        self.searchBar2.setText("")
+        self.searchBar2.setObjectName("lineEdit")
+        self.gridLayout_7.addWidget(self.searchBar2, 0, 1, 1, 3)
+        self.searchBar2.returnPressed.connect(self.searchReview)       
+
+        self.tableCalification = QtWidgets.QTableWidget(self.tab_calification)
+        self.tableCalification.setColumnCount(3)
+        self.tableCalification.setObjectName("tableCalification")
+        self.tableCalification.setRowCount(0)
+        header = self.tableCalification.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.Stretch)
+        self.tableCalification.verticalHeader().setVisible(False)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableCalification.setHorizontalHeaderItem(0, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableCalification.setHorizontalHeaderItem(1, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableCalification.setHorizontalHeaderItem(2, item)
+        self.gridLayout_7.addWidget(self.tableCalification, 1, 0, 1, 4)
+        self.tabWidget.addTab(self.tab_calification, "")
+
+                #CLON DE HISTORIAL DE PRESTAMOS, SI SALE ALGO MAL ES CULPA DE DANI
+        self.tab_orders = QtWidgets.QWidget()
+        self.tab_orders.setObjectName("tab_order")
+        self.gridLayout_9 = QtWidgets.QGridLayout(self.tab_orders)
+        self.gridLayout_9.setObjectName("gridLayout_9")
+        self.tableOrder = QtWidgets.QTableWidget(self.tab_orders)
+
+        #esta es la tabla
+        self.tableOrder.setColumnCount(6)
+        self.tableOrder.setObjectName("tableOrder")
+        self.tableOrder.setRowCount(0)
+        header = self.tableOrder.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.Stretch)
+        header.setSectionResizeMode(3, QHeaderView.Stretch)
+        header.setSectionResizeMode(4, QHeaderView.Stretch)
+        header.setSectionResizeMode(5, QHeaderView.Stretch)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableOrder.setHorizontalHeaderItem(0, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableOrder.setHorizontalHeaderItem(1, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableOrder.setHorizontalHeaderItem(2, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableOrder.setHorizontalHeaderItem(3, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableOrder.setHorizontalHeaderItem(4, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableOrder.setHorizontalHeaderItem(5, item)
+        self.gridLayout_9.addWidget(self.tableOrder, 10, 10, 10, 10)
+        
+        self.tabWidget.addTab(self.tab_orders, "")
+        
+        self.tableOrder.verticalHeader().setVisible(False)
+
+        MainWindow.setCentralWidget(self.centralwidget)
+        self.statusbar = QtWidgets.QStatusBar(MainWindow)
+        self.statusbar.setObjectName("statusbar")
+        MainWindow.setStatusBar(self.statusbar)
+
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
         spacerItem11 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
@@ -1263,90 +1469,6 @@ class Ui_MainWindow(object):
         
         self.tabWidget.addTab(self.tab_user, "")
 
-        #aqui empieza el tab de calificacion
-        self.tab_calification = QtWidgets.QWidget()
-        self.tab_calification.setObjectName("tab_calification")
-        self.gridLayout_7 = QtWidgets.QGridLayout(self.tab_calification)
-        self.gridLayout_7.setObjectName("gridLayout_7")
-
-        self.label = QtWidgets.QLabel(self.tab_calification)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
-        self.label.setSizePolicy(sizePolicy)
-        self.label.setMaximumSize(QtCore.QSize(25, 25))
-        self.label.setText("")
-        self.label.setPixmap(QtGui.QPixmap("imagenes/lupa1.png"))
-        self.label.setScaledContents(True)
-        self.label.setObjectName("label")
-        self.gridLayout_7.addWidget(self.label, 0, 0, 1, 1) 
-
-        self.searchBar2 = QtWidgets.QLineEdit(self.tab_calification)
-        self.searchBar2.setText("")
-        self.searchBar2.setObjectName("lineEdit")
-        self.gridLayout_7.addWidget(self.searchBar2, 0, 1, 1, 3)
-        self.searchBar2.returnPressed.connect(self.searchReview)       
-
-        self.tableCalification = QtWidgets.QTableWidget(self.tab_calification)
-        self.tableCalification.setColumnCount(3)
-        self.tableCalification.setObjectName("tableCalification")
-        self.tableCalification.setRowCount(0)
-        header = self.tableCalification.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.Stretch)
-        header.setSectionResizeMode(2, QHeaderView.Stretch)
-        self.tableCalification.verticalHeader().setVisible(False)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableCalification.setHorizontalHeaderItem(0, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableCalification.setHorizontalHeaderItem(1, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableCalification.setHorizontalHeaderItem(2, item)
-        self.gridLayout_7.addWidget(self.tableCalification, 1, 0, 1, 4)
-        self.tabWidget.addTab(self.tab_calification, "")
-
-                #CLON DE HISTORIAL DE PRESTAMOS, SI SALE ALGO MAL ES CULPA DE DANI
-        self.tab_orders = QtWidgets.QWidget()
-        self.tab_orders.setObjectName("tab_order")
-        self.gridLayout_9 = QtWidgets.QGridLayout(self.tab_orders)
-        self.gridLayout_9.setObjectName("gridLayout_9")
-        self.tableOrder = QtWidgets.QTableWidget(self.tab_orders)
-
-        #esta es la tabla
-        self.tableOrder.setColumnCount(6)
-        self.tableOrder.setObjectName("tableOrder")
-        self.tableOrder.setRowCount(0)
-        header = self.tableOrder.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.Stretch)
-        header.setSectionResizeMode(2, QHeaderView.Stretch)
-        header.setSectionResizeMode(3, QHeaderView.Stretch)
-        header.setSectionResizeMode(4, QHeaderView.Stretch)
-        header.setSectionResizeMode(5, QHeaderView.Stretch)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableOrder.setHorizontalHeaderItem(0, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableOrder.setHorizontalHeaderItem(1, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableOrder.setHorizontalHeaderItem(2, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableOrder.setHorizontalHeaderItem(3, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableOrder.setHorizontalHeaderItem(4, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableOrder.setHorizontalHeaderItem(5, item)
-        self.gridLayout_9.addWidget(self.tableOrder, 10, 10, 10, 10)
-        
-        self.tabWidget.addTab(self.tab_orders, "")
-        
-        self.tableOrder.verticalHeader().setVisible(False)
-
-        MainWindow.setCentralWidget(self.centralwidget)
-        self.statusbar = QtWidgets.QStatusBar(MainWindow)
-        self.statusbar.setObjectName("statusbar")
-        MainWindow.setStatusBar(self.statusbar)
-
         self.retranslateUi(MainWindow)
         self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -1398,6 +1520,7 @@ class Ui_MainWindow(object):
         item.setText(_translate("MainWindow", "Estado"))
         item = self.tableSearch.horizontalHeaderItem(5)
         item.setText(_translate("MainWindow", "Calificación"))
+        item = self.tableSearch.horizontalHeaderItem(6)
         item.setText(_translate("MainWindow", "Precio"))
         self.tableSearch.resizeColumnsToContents()
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_search), _translate("MainWindow", "Busqueda"))
@@ -1510,9 +1633,9 @@ class Ui_MainWindow(object):
                 if(showMessage):
                     QtWidgets.QMessageBox.information(None, "Inicio de sesión exitoso", f"¡Bienvenido {usuario[1]} {usuario[2]} {usuario[3]}!")
                 self.guardar_credenciales(email, contraseña)
-                self.tabWidget.insertTab(4, self.tab_user, "Datos de usuario")  # Muestra la pestaña tab_user al cerrar sesión
-                self.tabWidget.removeTab(3)  # Oculta la pestaña tab_user al iniciar sesión
-                self.tabWidget.setCurrentIndex(4)  # Cambia a la pestaña tab_account
+                self.tabWidget.removeTab(5)  # Oculta la pestaña tab_user al iniciar sesión
+                self.tabWidget.insertTab(5, self.tab_user, "Datos de usuario")  # Muestra la pestaña tab_user al cerrar sesión
+                self.tabWidget.setCurrentIndex(0)  # Cambia a la pestaña tab_account
             else:
                 if(showMessage):
                     QtWidgets.QMessageBox.critical(None, "Error", "Credenciales inválidas.\n¿El usuario está registrado?")
@@ -1588,8 +1711,8 @@ class Ui_MainWindow(object):
             self.account_id = 0
             self.inputEmail.clear()
             self.inputPassword.clear()
-            self.tabWidget.insertTab(3, self.tab_account, "Cuenta")  # Muestra la pestaña tab_user al cerrar sesión
-            self.tabWidget.removeTab(4)  # Oculta la pestaña tab_user al cerrar sesión
+            self.tabWidget.removeTab(5)  # Oculta la pestaña tab_user al cerrar sesión
+            self.tabWidget.insertTab(5, self.tab_account, "Cuenta")  # Muestra la pestaña tab_user al cerrar sesión
             self.tabWidget.setCurrentIndex(3)  # Cambia a la pestaña tab_account
 
     # Busqueda por título
@@ -1676,7 +1799,7 @@ class Ui_MainWindow(object):
                 for row_number, row_data in enumerate(cur):
                     self.tableSearch.insertRow(row_number)
                     # Ajusta el orden de los datos para mostrarlos en la tabla
-                    data_order = [3, 1, 4, 0, 2, 5]  # Orden de las columnas: titulo, autor, genero, id, estado, calificacion
+                    data_order = [3, 1, 4, 0, 2, 5, 6]  # Orden de las columnas: titulo, autor, genero, id, estado, calificacion
 
                     for column_number, index in enumerate(data_order):
                         if index == 2:  # Si la columna es la del estado
@@ -1705,6 +1828,7 @@ class Ui_MainWindow(object):
                 header.setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeToContents)  # Columna "ID Libro"
                 header.setSectionResizeMode(4, QtWidgets.QHeaderView.ResizeToContents)  # Columna "Estado"
                 header.setSectionResizeMode(5, QtWidgets.QHeaderView.ResizeToContents)
+                header.setSectionResizeMode(6, QtWidgets.QHeaderView.ResizeToContents)
                 self.tableSearch.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
                 self.tableSearch.horizontalHeader().setStretchLastSection(True)
                 
@@ -1807,7 +1931,7 @@ class Ui_MainWindow(object):
         if reply != QMessageBox.Ok:
             return
         
-        pago = VentanaPago("", precio, "")
+        pago = VentanaPago(precio)
         pago.exec_()
 
         if pago.payBook():
@@ -2082,9 +2206,9 @@ class Ui_MainWindow(object):
             self.actualizar_mis_libros()
         elif self.tabWidget.currentIndex() == 1:
             self.actualizar_historial()
-        elif self.tabWidget.currentIndex() == 3:
-            self.show_orders()
         elif self.tabWidget.currentIndex() == 4:
+            self.show_orders()
+        elif self.tabWidget.currentIndex() == 5:
             self.actualizar_usuario()
 
     # Actualizar el crédito del usuario
@@ -2206,7 +2330,7 @@ Gracias por tu preferencia.
         else:
             QtWidgets.QMessageBox.critical(None, "Error", "Selecciona un libro para calificar.")
 
-            def sancionar_usuarios(self):
+    def sancionar_usuarios(self):
         try:
             conn = self.conectar()
             if conn:
