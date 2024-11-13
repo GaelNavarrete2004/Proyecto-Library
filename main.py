@@ -6,13 +6,15 @@ from PyQt5.QtWidgets import (QPushButton, QVBoxLayout,
                              QLineEdit, QLabel, QDialog, QDesktopWidget, 
 
                              QMessageBox, QTableWidget, QTableWidgetItem, 
-                             QHeaderView, QComboBox, QHBoxLayout, QDoubleSpinBox, QTextEdit)
+                             QHeaderView, QComboBox, QHBoxLayout, QDoubleSpinBox, QTextEdit,
+                             QApplication, QMessageBox)
 
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt
 from datetime import datetime, timedelta
 import json, os, ssl, smtplib, sys, re, mariadb
 from Database import conectar
+from translations import languages
 
 # Datos para enviar correos electrónicos
 password = "gvqr gzpl irqn mqzk"            # Contraseña de app generada para el correo electrónico
@@ -33,7 +35,7 @@ subject = " "                               # Asunto del correo
 body = " "                                  # Cuerpo del correo
 
 # Versión de la aplicación
-version = "2.0.1"
+version = "3.0.1"
 
 # Obtiene el directorio del script
 script_dir = os.path.dirname(__file__)  
@@ -55,16 +57,19 @@ def abrir_directorio():
 # Quitar comentario para abrir el directorio
 # abrir_directorio()
 
+
 class VentanaCalificar(QDialog):
-    def __init__(self, id_libro, titulo_libro, account_id, parent=None):
+    def __init__(self, id_libro, titulo_libro, account_id, language='en', parent=None):
         super().__init__(parent)
         self.id_libro = id_libro
         self.titulo_libro = titulo_libro
         self.account_id = account_id
+        self.language = language
+        self.translations = languages[self.language]
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("Calificar libro")
+        self.setWindowTitle(self.translations['book_rating'])
         self.setFixedSize(500, 250)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
@@ -108,11 +113,11 @@ class VentanaCalificar(QDialog):
 
         # Añadimos los elementos visuales
         self.labelTitulo = QLabel(self)
-        self.labelTitulo.setText(f"Libro: {self.titulo_libro}")
+        self.labelTitulo.setText(f"{self.translations['book']} {self.titulo_libro}")
         self.labelTitulo.setAlignment(Qt.AlignCenter)
 
         self.labelCalificacion = QLabel(self)
-        self.labelCalificacion.setText("Calificación (0.0 - 5.0):")
+        self.labelCalificacion.setText(self.translations['rating_label'])
 
         # Cambiamos QComboBox por QDoubleSpinBox para permitir decimales
         self.spinCalificacion = QDoubleSpinBox(self)
@@ -121,14 +126,14 @@ class VentanaCalificar(QDialog):
         self.spinCalificacion.setDecimals(1)  # Mostrar solo un decimal
         
         self.labelReseña = QLabel(self)
-        self.labelReseña.setText("Escribe una reseña:")
+        self.labelReseña.setText(self.translations['review_label'])
 
         # Campo para escribir la reseña
         self.textReseña = QTextEdit(self)
-        self.textReseña.setPlaceholderText("Escribe tu reseña aquí...")
+        self.textReseña.setPlaceholderText(self.translations['placeholder_text'])
 
         # Mejoramos el botón "Calificar"
-        self.btnCalificar = QPushButton("Calificar y Reseñar", self)
+        self.btnCalificar = QPushButton(self.translations['submit_button'], self)
         self.btnCalificar.setIcon(QIcon("icono_calificar.png"))  # Agrega un ícono si lo deseas
         self.btnCalificar.setCursor(Qt.PointingHandCursor)
         self.btnCalificar.clicked.connect(self.calificar)
@@ -178,35 +183,33 @@ class VentanaCalificar(QDialog):
                 conn.commit()
 
                 # Mostrar un mensaje de éxito
-                QtWidgets.QMessageBox.information(self, "Calificación y Reseña", "Calificación realizada con éxito.")
+                QtWidgets.QMessageBox.information(self, self.translations['title'], self.translations['success_message'])
                 self.accept()
 
             except mariadb.Error as e:
-                print(f"Error al calificar el libro: {e}")
+                print(f"{self.translations['review_error']} {e}")
             finally:
                 conn.close()
         else:
-            QtWidgets.QMessageBox.critical(self, "Error", "No se pudo conectar a la base de datos.")
-
-        
-
-
-
-
+            QtWidgets.QMessageBox.critical(self, "Error", self.translations['error_message'])
 
 class VentanaPago(QDialog):
-    def __init__(self, account_id, credit, account_email, main_window):
+    def __init__(self, account_id, credit, account_email, language='en'):
         super().__init__()
         self.credit = credit
         self.account_id = account_id
         self.account_email = account_email
-        self.main_window = main_window  # Almacena la referencia a la ventana principal
-        self.sancion_aplicada = False
+        self.language = language
+        self.translations = languages[self.language]
         self.init_ui()
 
+    def closeEvent(self, event):
+        self.closed.emit()  # Emitir la señal cuando la ventana se cierre
+        event.accept()
+        
     def init_ui(self):
         # Título de la ventana
-        self.setWindowTitle("Pagar")
+        self.setWindowTitle(self.translations['pay'])
         # Tamaño fijo de la ventana
         self.setFixedSize(500, 500)
         # Quitar el botón de ayuda
@@ -249,28 +252,27 @@ class VentanaPago(QDialog):
         """)
         # Saldo pendiente
         self.labelCredit = QLabel(self)
-        self.labelCredit.setText(f"Saldo pendiente: ${self.credit}")
+        self.labelCredit.setText(f"{self.translations['pending_pay']}{self.credit}")
         # Etiqueta para nombre del beneficiario
         self.labelNombre = QLabel(self)
-        self.labelNombre.setText("Nombre del beneficiario:")
+        self.labelNombre.setText(self.translations['name_benef'])
         self.inputNombre = QLineEdit(self)
 
         # Etiqueta para numero de tarjeta
         self.labelTarjeta = QLabel(self)
-        self.labelTarjeta.setText("Número de tarjeta:")
+        self.labelTarjeta.setText(self.translations['card_number'])
         self.inputTarjeta = QLineEdit(self)
         self.inputTarjeta.setInputMask("9999-9999-9999-9999")
         
         # Selector de mes
         self.labelMes = QLabel(self)
-        self.labelMes.setText("Mes de vencimiento:")
+        self.labelMes.setText(self.translations['card_month'])
         self.comboMes = QComboBox(self)
-        self.comboMes.addItems(["01 - Enero", "02 - Febrero", "03 - Marzo", "04 - Abril", "05 - Mayo", "06 - Junio",
-                                "07 - Julio", "08 - Agosto", "09 - Septiembre", "10 - Octubre", "11 - Noviembre", "12 - Diciembre"])
+        self.comboMes.addItems(self.translations['months'])
 
         # Selector de año
         self.labelAño = QLabel(self)
-        self.labelAño.setText("Año de vencimiento:")
+        self.labelAño.setText(self.translations['expiration_year'])
         self.comboAño = QComboBox(self)
         current_year = datetime.now().year
         self.comboAño.addItems([str(año) for año in range(current_year, current_year+15)])
@@ -296,7 +298,7 @@ class VentanaPago(QDialog):
         icon_layout.addWidget(self.labelMastercard)
         icon_layout.setAlignment(Qt.AlignCenter)
 
-        self.btnPay = QPushButton("Pagar", self)
+        self.btnPay = QPushButton(self.translations['pay'], self)
         self.btnPay.clicked.connect(self.pay)
 
         layout = QVBoxLayout()
@@ -316,116 +318,116 @@ class VentanaPago(QDialog):
         self.center()
 
 
-    def init_ui2(self):
-        # Título de la ventana
-        self.setWindowTitle("Pagar")
-        # Tamaño fijo de la ventana
-        self.setFixedSize(500, 500)
-        # Quitar el botón de ayuda
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        # Aplica la hoja de estilo a la ventana
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #DAC8AE;
-                color: #111111;
-            }
+    # def init_ui2(self):
+    #     # Título de la ventana
+    #     self.setWindowTitle("Pagar")
+    #     # Tamaño fijo de la ventana
+    #     self.setFixedSize(500, 500)
+    #     # Quitar el botón de ayuda
+    #     self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+    #     # Aplica la hoja de estilo a la ventana
+    #     self.setStyleSheet("""
+    #         QWidget {
+    #             background-color: #DAC8AE;
+    #             color: #111111;
+    #         }
 
-            /* Estilo para los botones */
-            QPushButton {
-                background-color: #EFDECD;
-                color: #1A1110;
-                border: 2px solid #1A1110;
-                padding: 5px;
-            }
+    #         /* Estilo para los botones */
+    #         QPushButton {
+    #             background-color: #EFDECD;
+    #             color: #1A1110;
+    #             border: 2px solid #1A1110;
+    #             padding: 5px;
+    #         }
 
-            QPushButton:hover {
-                background-color: #CC7722;
-            }
+    #         QPushButton:hover {
+    #             background-color: #CC7722;
+    #         }
 
-            /* Estilo para los cuadros de texto */
-            QLineEdit {
-                background-color: #FFFFFF;
-                color: #111111;
-                border: 1px solid #00416A;
-                padding: 4px;
-            }
+    #         /* Estilo para los cuadros de texto */
+    #         QLineEdit {
+    #             background-color: #FFFFFF;
+    #             color: #111111;
+    #             border: 1px solid #00416A;
+    #             padding: 4px;
+    #         }
 
-            QLineEdit:focus {
-                border: 2px solid #00416A;
-            }
+    #         QLineEdit:focus {
+    #             border: 2px solid #00416A;
+    #         }
 
-            /* Estilo para las etiquetas */
-            QLabel {
-                color: #1A1110;
-            }
-        """)
-        # Saldo pendiente
-        self.labelCredit = QLabel(self)
-        self.labelCredit.setText(f"Costo del libro: ${self.credit}")
-        # Etiqueta para nombre del beneficiario
-        self.labelNombre = QLabel(self)
-        self.labelNombre.setText("Nombre del beneficiario:")
-        self.inputNombre = QLineEdit(self)
+    #         /* Estilo para las etiquetas */
+    #         QLabel {
+    #             color: #1A1110;
+    #         }
+    #     """)
+    #     # Saldo pendiente
+    #     self.labelCredit = QLabel(self)
+    #     self.labelCredit.setText(f"Costo del libro: ${self.credit}")
+    #     # Etiqueta para nombre del beneficiario
+    #     self.labelNombre = QLabel(self)
+    #     self.labelNombre.setText("Nombre del beneficiario:")
+    #     self.inputNombre = QLineEdit(self)
 
-        # Etiqueta para numero de tarjeta
-        self.labelTarjeta = QLabel(self)
-        self.labelTarjeta.setText("Número de tarjeta:")
-        self.inputTarjeta = QLineEdit(self)
-        self.inputTarjeta.setInputMask("9999-9999-9999-9999")
+    #     # Etiqueta para numero de tarjeta
+    #     self.labelTarjeta = QLabel(self)
+    #     self.labelTarjeta.setText("Número de tarjeta:")
+    #     self.inputTarjeta = QLineEdit(self)
+    #     self.inputTarjeta.setInputMask("9999-9999-9999-9999")
         
-        # Selector de mes
-        self.labelMes = QLabel(self)
-        self.labelMes.setText("Mes de vencimiento:")
-        self.comboMes = QComboBox(self)
-        self.comboMes.addItems(["01 - Enero", "02 - Febrero", "03 - Marzo", "04 - Abril", "05 - Mayo", "06 - Junio",
-                                "07 - Julio", "08 - Agosto", "09 - Septiembre", "10 - Octubre", "11 - Noviembre", "12 - Diciembre"])
+    #     # Selector de mes
+    #     self.labelMes = QLabel(self)
+    #     self.labelMes.setText("Mes de vencimiento:")
+    #     self.comboMes = QComboBox(self)
+    #     self.comboMes.addItems(["01 - Enero", "02 - Febrero", "03 - Marzo", "04 - Abril", "05 - Mayo", "06 - Junio",
+    #                             "07 - Julio", "08 - Agosto", "09 - Septiembre", "10 - Octubre", "11 - Noviembre", "12 - Diciembre"])
 
-        # Selector de año
-        self.labelAño = QLabel(self)
-        self.labelAño.setText("Año de vencimiento:")
-        self.comboAño = QComboBox(self)
-        current_year = datetime.now().year
-        self.comboAño.addItems([str(año) for año in range(current_year, current_year+15)])
+    #     # Selector de año
+    #     self.labelAño = QLabel(self)
+    #     self.labelAño.setText("Año de vencimiento:")
+    #     self.comboAño = QComboBox(self)
+    #     current_year = datetime.now().year
+    #     self.comboAño.addItems([str(año) for año in range(current_year, current_year+15)])
 
-        # Iconos de Visa y Mastercard
+    #     # Iconos de Visa y Mastercard
         
-        image_visa = os.path.join(script_dir, "imagenes/visa.png")
-        image_master = os.path.join(script_dir, "imagenes/mastercard.png")
-        pixmap_visa = QPixmap(image_visa)
-        pixmap_mastercard = QPixmap(image_master)
-        self.labelVisa = QLabel(self)
-        self.labelVisa.setPixmap(pixmap_visa.scaledToHeight(30))
-        self.labelVisa.setAlignment(Qt.AlignCenter)
-        self.labelVisa.setScaledContents(True)
-        self.labelMastercard = QLabel(self)
-        self.labelMastercard.setPixmap(pixmap_mastercard.scaledToHeight(30))
-        self.labelMastercard.setAlignment(Qt.AlignCenter)
-        self.labelMastercard.setScaledContents(True)
+    #     image_visa = os.path.join(script_dir, "imagenes/visa.png")
+    #     image_master = os.path.join(script_dir, "imagenes/mastercard.png")
+    #     pixmap_visa = QPixmap(image_visa)
+    #     pixmap_mastercard = QPixmap(image_master)
+    #     self.labelVisa = QLabel(self)
+    #     self.labelVisa.setPixmap(pixmap_visa.scaledToHeight(30))
+    #     self.labelVisa.setAlignment(Qt.AlignCenter)
+    #     self.labelVisa.setScaledContents(True)
+    #     self.labelMastercard = QLabel(self)
+    #     self.labelMastercard.setPixmap(pixmap_mastercard.scaledToHeight(30))
+    #     self.labelMastercard.setAlignment(Qt.AlignCenter)
+    #     self.labelMastercard.setScaledContents(True)
 
-        # Layout para los iconos
-        icon_layout = QHBoxLayout()
-        icon_layout.addWidget(self.labelVisa)
-        icon_layout.addWidget(self.labelMastercard)
-        icon_layout.setAlignment(Qt.AlignCenter)
+    #     # Layout para los iconos
+    #     icon_layout = QHBoxLayout()
+    #     icon_layout.addWidget(self.labelVisa)
+    #     icon_layout.addWidget(self.labelMastercard)
+    #     icon_layout.setAlignment(Qt.AlignCenter)
 
-        self.btnPay = QPushButton("Pagar", self)
-        self.btnPay.clicked.connect(self.payBook)
+    #     self.btnPay = QPushButton("Pagar", self)
+    #     self.btnPay.clicked.connect(self.payBook)
 
-        layout = QVBoxLayout()
-        layout.addLayout(icon_layout)
-        layout.addWidget(self.labelCredit)
-        layout.addWidget(self.labelNombre)
-        layout.addWidget(self.inputNombre)
-        layout.addWidget(self.labelTarjeta)
-        layout.addWidget(self.inputTarjeta)
-        layout.addWidget(self.labelMes)
-        layout.addWidget(self.comboMes)
-        layout.addWidget(self.labelAño)
-        layout.addWidget(self.comboAño)
-        layout.addWidget(self.btnPay)
+    #     layout = QVBoxLayout()
+    #     layout.addLayout(icon_layout)
+    #     layout.addWidget(self.labelCredit)
+    #     layout.addWidget(self.labelNombre)
+    #     layout.addWidget(self.inputNombre)
+    #     layout.addWidget(self.labelTarjeta)
+    #     layout.addWidget(self.inputTarjeta)
+    #     layout.addWidget(self.labelMes)
+    #     layout.addWidget(self.comboMes)
+    #     layout.addWidget(self.labelAño)
+    #     layout.addWidget(self.comboAño)
+    #     layout.addWidget(self.btnPay)
 
-        self.setLayout(layout)
-        self.center()
+    #     self.setLayout(layout)
+    #     self.center()
 
 
     def center(self):
@@ -459,15 +461,15 @@ class VentanaPago(QDialog):
         tarjeta = self.inputTarjeta.text().replace(" ", "")
         # Verificar si el nombre es válido
         if not nombre:
-            QtWidgets.QMessageBox.critical(None, "Error", "Por favor, ingrese el nombre del beneficiario.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['error_name'])
             return
         # Verificar si la tarjeta es válida (solo números y longitud de 16)
         if not re.match("^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{4}$", tarjeta):
-            QtWidgets.QMessageBox.critical(None, "Error", "Número de tarjeta inválido.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['error_card'])
             return
         # Validar el número de la tarjeta utilizando el algoritmo de Luhn
         if not self.luhn_check(tarjeta):
-            QtWidgets.QMessageBox.critical(None, "Error", "Número de tarjeta inválido según la verificación de Luhn.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['luhn_erorr'])
             return
 
         # Cerrar la ventana de pago
@@ -475,18 +477,35 @@ class VentanaPago(QDialog):
 
         return True
     
+    def obtener_send_email(self, user_id):
+        """Obtiene el valor del atributo 'send_email' de un usuario específico en la base de datos."""
+        try:
+            conn = conectar()
+            cur = conn.cursor()
+
+            # Consulta para obtener solo el valor de 'send_email' para el usuario dado
+            cur.execute("SELECT send_email FROM usuarios WHERE id = ?", (user_id,))
+            result = cur.fetchone()
+
+            if result:
+                return result[0]  # Retorna el valor de send_email (True o False)
+            else:
+                return None  # Retorna None si no se encontró el usuario
+
+        except mariadb.Error as e:
+            QtWidgets.QMessageBox.critical(None, "Error", f"No se pudo obtener el valor de send_email: {e}")
+            return None
+
+        finally:
+            if conn:
+                conn.close()
+
     def pay(self):
         if self.credit == 0:
-            QtWidgets.QMessageBox.information(None, "Saldo pendiente", "Actualmente no tienes saldo pendiente por pagar.")
+            QtWidgets.QMessageBox.information(None, self.translations['pending_pay2'], self.translations['no_balance'])
             return
         else:
-            ventana_pago = VentanaPago(self.account_id, self.credit, self.account_email, self.main_window)
-            ventana_pago.exec_()
-             # Verificar la bandera antes de llamar a sancionar_usuarios
-            if not self.sancion_aplicada:
-                ventana_pago.sancionar_usuarios()
-                self.sancion_aplicada = True  # Actualizar la bandera después de llamar a sancionar_usuarios
-            
+            ventana_pago = VentanaPago(self.account_id, self.credit, self.account_email)
         # Obtener los datos ingresados por el usuario
         nombre = self.inputNombre.text()
         tarjeta = self.inputTarjeta.text().replace(" ", "")
@@ -495,11 +514,11 @@ class VentanaPago(QDialog):
         # Verificar si el nombre es válido
         # Verificar si la tarjeta es válida (solo números y longitud de 16)
         if not re.match("^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{4}$", tarjeta):
-            QtWidgets.QMessageBox.critical(None, "Error", "Número de tarjeta inválido.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['error_name'])
             return
         # Validar el número de la tarjeta utilizando el algoritmo de Luhn
         if not self.luhn_check(tarjeta):
-            QtWidgets.QMessageBox.critical(None, "Error", "Número de tarjeta inválido según la verificación de Luhn.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['luhn_erorr'])
             return
         # Realizar el pago y actualizar la base de datos
         conn = conectar()
@@ -509,85 +528,54 @@ class VentanaPago(QDialog):
                 # Realizar el pago y actualizar el crédito del usuario
                 cursor.execute("UPDATE usuarios SET credit = 0, cuenta_cancelada = 1, multa = 0 WHERE id = ?", (self.account_id,))
                 conn.commit()
-                QtWidgets.QMessageBox.information(None, "Pago exitoso", "El pago se ha realizado con éxito. Y se han eliminado las sanciones\nPuede que el pago tarde un poco en verse reflejado, reinicie la aplicación si el pago no se ve reflejado.")
+                QtWidgets.QMessageBox.information(None, self.translations['valid_pay'], self.translations['payment_succes'])
                 conn.commit()
             except mariadb.Error as e:
-                print(f"Error al actualizar la base de datos: {e}")
+                print(f"{self.translations['bd_error']} {e}")
             finally:
                 conn.close()
             fecha_hoy = datetime.now().strftime('%d / %m / %Y')
-            subject = f"Saldo pendiente liquidado"
+            subject = f"{self.translations['pay_liquidated']}"
             body = f"""
-Has realizado el pago de tu saldo pendiente con éxito el día {fecha_hoy}.
+{self.translations['pay_confirmation']} {fecha_hoy}.
 
-Gracias por tu preferencia.
+{self.translations['pay_confirm']}
     """
-            email_reciver = self.account_email
-            if re.match(email_regex, email_reciver):
-                em = EmailMessage()
-                em["From"] = email_sender
-                em["To"] = email_reciver
-                em["Subject"] = subject
-                em.set_content(body)
+            if self.obtener_send_email(self.account_id) is True:
+                email_reciver = self.account_email
+                if re.match(email_regex, email_reciver):
+                    em = EmailMessage()
+                    em["From"] = email_sender
+                    em["To"] = email_reciver
+                    em["Subject"] = subject
+                    em.set_content(body)
 
-                try:
-                    context = ssl.create_default_context()
-                    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as smtp:
-                        smtp.login(email_sender, password)
-                        smtp.sendmail(email_sender, email_reciver, em.as_string())
-                    print("Correo enviado correctamente.")
-                except Exception as e:
-                    print(f"Error al enviar el correo: {e}")
-            else:
-                print("Dirección de correo electrónico no válida.")
+                    try:
+                        context = ssl.create_default_context()
+                        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as smtp:
+                            smtp.login(email_sender, password)
+                            smtp.sendmail(email_sender, email_reciver, em.as_string())
+                        print(self.translations['email_confirmation'])
+                    except Exception as e:
+                        print(f"{self.translations['email_error']} {e}")
+                else:
+                    print(self.translations['not_valid_email'])
         else:
-            QtWidgets.QMessageBox.critical(None, "Error", "No se pudo conectar a la base de datos.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['error_message'])
     
         # Cerrar la ventana de pago
         self.accept()
 
-    def sancionar_usuarios(self):
-        try:
-            conn = conectar()
-            if conn:
-                cursor = conn.cursor()
-                # Obtener solo el usuario que ha iniciado sesión
-                cursor.execute("SELECT DATEDIFF(NOW(), fecha_prestamo) as dias_retraso FROM prestamo WHERE id_usuario = ? AND fecha_prestamo < NOW() AND devuelto = 0", (self.account_id,))
-                resultado = cursor.fetchone()  # Usamos fetchone() para obtener solo una fila
-
-                if resultado:  # Verificamos si se encontró un resultado
-                    dias_retraso = resultado[0]  # Días de retraso
-                    if dias_retraso > 0:
-                        if dias_retraso <= 7:
-                            multa = dias_retraso * 5  # Multa de 5 unidades por día de retraso
-                            cursor.execute("UPDATE usuarios SET multa = multa + ? WHERE id = ?", (multa, self.account_id))
-                            conn.commit()
-                            QtWidgets.QMessageBox.information(self.main_window, "Sanción aplicada", f"Se ha aplicado una multa de {multa} unidades por {dias_retraso} días de retraso.")
-                            conn.commit()
-                        else:
-                            cursor.execute("UPDATE usuarios SET cuenta_cancelada = 2, multa = 10 WHERE id = ?", (self.account_id,))
-                            conn.commit()
-                            QtWidgets.QMessageBox.information(self.main_window, "Sanción aplicada", "Se ha cancelado la cuenta del usuario por más de 7 días de retraso.")
-                else:
-                    QtWidgets.QMessageBox.information(self.main_window, "Información", "No hay libros no devueltos a tiempo.")
-                
-                conn.commit()  # Asegúrate de hacer commit para guardar los cambios en la base de datos
-            else:
-                QtWidgets.QMessageBox.critical(self.main_window, "Error", "No se pudo conectar a la base de datos.")
-        except mariadb.Error as e:
-            print(f"Error al actualizar la base de datos: {e}")
-        finally:
-            if conn:
-                conn.close()
-
 class VentanaRegistro(QDialog):
-    def __init__(self):
+    def __init__(self, language='en'):
         super().__init__()
+        self.language = language
+        self.translations = languages[self.language]
         self.init_ui()
 
     def init_ui(self):
         # Define los elementos de la ventana modal aquí
-        self.setWindowTitle("Registrarse")
+        self.setWindowTitle(self.translations['register'])
         self.setGeometry(600, 300, 600, 300)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         
@@ -634,23 +622,23 @@ class VentanaRegistro(QDialog):
         self.inputEmail = QLineEdit(self)
         # Etiqueta para contraseña
         self.labelPassword = QLabel(self)
-        self.labelPassword.setText("Contraseña:")
+        self.labelPassword.setText(self.translations['password'])
         self.inputPassword = QLineEdit(self)
         # Etiqueta para nombre
         self.labelName = QLabel(self)
-        self.labelName.setText("Nombre:")
+        self.labelName.setText(self.translations['name']) 
         self.inputName = QLineEdit(self)
         # Etiqueta para Apellido1
         self.labelLastName1 = QLabel(self)
-        self.labelLastName1.setText("Apellido paterno:")
+        self.labelLastName1.setText(self.translations['last_name_father'])
         self.inputLastName1 = QLineEdit(self)
         # Etiqueta para Apellido2
         self.labelLastName2 = QLabel(self)
-        self.labelLastName2.setText("Apellido materno:")
+        self.labelLastName2.setText(self.translations['last_name_mother'])
         self.inputLastName2 = QLineEdit(self)
 
         # Botón para eliminar el registro
-        self.btnRegister = QPushButton("Registrarse", self)
+        self.btnRegister = QPushButton(self.translations['register'], self)
         self.btnRegister.clicked.connect(self.insertar)
 
         # Layout vertical para organizar los elementos
@@ -705,23 +693,23 @@ class VentanaRegistro(QDialog):
         apellido2 = self.inputLastName2.text()
 
         if not self.validarcorreo(email):
-            QtWidgets.QMessageBox.critical(self, "Error", "Formato de correo inválido.")
+            QtWidgets.QMessageBox.critical(self, "Error", self.translations['email_error'])
             return
 
         if not self.validarpass(contraseña):
-            QtWidgets.QMessageBox.critical(self, "Error", "La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.")
+            QtWidgets.QMessageBox.critical(self, "Error", self.translations['password_error'])
             return
         
         if self.validarVacio(nombre):
-            QtWidgets.QMessageBox.critical(self, "Error", "El nombre es obligatorio y debe tener al menos 3 caracteres.")
+            QtWidgets.QMessageBox.critical(self, "Error", self.translations['name_error'])
             return
         
         if self.validarVacio(apellido1):
-            QtWidgets.QMessageBox.critical(self, "Error", "El apellido paterno es obligatorio y debe tener al menos 3 caracteres.")
+            QtWidgets.QMessageBox.critical(self, "Error", self.translations['last_name_father_error'])
             return
         
         if self.validarVacio(apellido2):
-            QtWidgets.QMessageBox.critical(self, "Error", "El apellido materno es obligatorio y debe tener al menos 3 caracteres.")
+            QtWidgets.QMessageBox.critical(self, "Error", self.translations['last_name_mother_error'])
             return
         
         # Insertar el registro en la base de datos
@@ -729,12 +717,12 @@ class VentanaRegistro(QDialog):
             # Asignar el ID del usuario registrado a la variable usuario_id
             usuario_id = self.insertar_usuarios(email, contraseña, nombre, apellido1, apellido2)
             if usuario_id:
-                QtWidgets.QMessageBox.information(self, "Éxito", "Registro realizado correctamente.")
-                print("ID del usuario registrado:", usuario_id)
+                QtWidgets.QMessageBox.information(self, "Éxito", self.translations['success_message'])
+                print(self.translations['register_user_id'], usuario_id)
                 self.close()
 
         except mariadb.Error as e:
-            QtWidgets.QMessageBox.critical(self, "Error", f"Error al realizar el registro: {e}")
+            QtWidgets.QMessageBox.critical(self, "Error", f"{self.translations['register_error']} {e}")
 
     # Ejecutar una consulta en la base de datos
     def ejecutar_query(self, query, values):
@@ -745,7 +733,7 @@ class VentanaRegistro(QDialog):
             conn.commit()
             return cur.lastrowid
         except mariadb.Error as e:
-            QtWidgets.QMessageBox.critical(self, "Error", f"Error al realizar el registro: {e}")
+            QtWidgets.QMessageBox.critical(self, "Error", f"{self.translations['register_error']} {e}")
             return None
         finally:
             if conn:
@@ -755,17 +743,19 @@ class VentanaRegistro(QDialog):
     def insertar_usuarios(self, email, contraseña, nombre, apellido1, apellido2):
         query = "INSERT INTO usuarios (email, password, name, last_name1, last_name2) VALUES (?, ?, ?, ?, ?)"
         values = (email, contraseña, nombre, apellido1, apellido2)
+        self.ejecutar_query(query, values)
+
 class Ui_MainWindow(object):
     def __init__(self):
+        self.main_window = MainWindow
         self.key = self.cargar_clave()  # Carga la clave en una variable de instancia
         self.cipher_suite = Fernet(self.key)  # Crea la suite de cifrado
-        self.main_window = MainWindow
         self.sancion_aplicada = False  # Bandera para rastrear si sancionar_usuarios ya ha sido llamada
         self.key = self.cargar_clave()  # Carga la clave en una variable de instancia
         self.cipher_suite = Fernet(self.key)  # Crea la suite de cifrado
-        self.main_window = MainWindow
         
     def setupUi(self, MainWindow):
+        self.main_window = MainWindow
         MainWindow.setObjectName("MainWindow")
         MainWindow.setWindowModality(QtCore.Qt.NonModal)
         MainWindow.resize(1055, 718)
@@ -848,6 +838,11 @@ class Ui_MainWindow(object):
 "        QLineEdit:focus {\n"
 "            border: 2px solid #00416A;  /* Borde más grueso cuando está enfocado */\n"
 "        }")
+        self.btnChangeLanguage = QtWidgets.QPushButton(self.centralwidget)
+        self.btnChangeLanguage.setObjectName("btnChangeLanguage")
+        self.gridLayout.addWidget(self.btnChangeLanguage, 0, 0, 1, 1)
+        self.btnChangeLanguage.clicked.connect(self.change_language)
+        
         self.tabWidget.setObjectName("tabWidget")
         self.tab_search = QtWidgets.QWidget()
         self.tab_search.setObjectName("tab_search")
@@ -1353,6 +1348,13 @@ class Ui_MainWindow(object):
         self.labelUserID.setFont(font)
         self.labelUserID.setObjectName("labelUserID")
         self.gridLayout_7.addWidget(self.labelUserID, 11, 2, 1, 1)
+
+        #CULPA DE DANI
+        self.send_email_checkbox = QtWidgets.QCheckBox(self.tab_user)
+        self.send_email_checkbox.setFont(font)
+        self.send_email_checkbox.setObjectName("send_email_checkbox")
+        self.gridLayout_7.addWidget(self.send_email_checkbox, 11, 2, 1, 1)  # Columna 3, misma fila
+
         self.transparent = QtWidgets.QLabel(self.tab_user)
         self.transparent.setEnabled(True)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
@@ -1474,7 +1476,7 @@ class Ui_MainWindow(object):
         self.cargar_credenciales()
         self.tabWidget.removeTab(6)
         self.tabWidget.setCurrentIndex(0)
-
+        
         self.retranslateUi(MainWindow)
         self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -1492,106 +1494,114 @@ class Ui_MainWindow(object):
         MainWindow.setTabOrder(self.pushButton_8, self.tableHistory)
         MainWindow.setTabOrder(self.tableHistory, self.tableSearch)
 
-    def retranslateUi(self, MainWindow):
+    def retranslateUi(self, MainWindow, language='en'):
+        self.language = language
+        self.translations = languages[self.language]
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", f"LibraryPy - {version}"))
         icon = os.path.join(script_dir, 'imagenes/icon.ico').replace("\\", "/")
         MainWindow.setWindowIcon(QIcon(icon))
-        self.btnComprar.setText(_translate("MainWindow", "Comprar"))
-        self.btnReservar.setText(_translate("MainWindow", "Reservar"))
-        self.btnSearchAutor.setText(_translate("MainWindow", "   Buscar autor"))
-        self.btnSearchTitle.setText(_translate("MainWindow", "    Buscar título"))
-        self.btnSearchGenre.setText(_translate("MainWindow", "   Buscar género"))
-        self.searchBar.setPlaceholderText(_translate("MainWindow", "Título, autor o género"))
+        self.btnChangeLanguage.setText(_translate("MainWindow", self.translations["change_language"]))
+        self.btnComprar.setText(_translate("MainWindow", self.translations["buy"]))
+        self.btnReservar.setText(_translate("MainWindow", self.translations["reserve"]))
+        self.btnSearchAutor.setText(_translate("MainWindow", self.translations["search_author"]))
+        self.btnSearchTitle.setText(_translate("MainWindow", self.translations["search_title"]))
+        self.btnSearchGenre.setText(_translate("MainWindow", self.translations["search_genre"]))
+        self.searchBar.setPlaceholderText(_translate("MainWindow", self.translations["search"]))
         item = self.tableSearch.horizontalHeaderItem(0)
-        item.setText(_translate("MainWindow", "Título"))
+        item.setText(_translate("MainWindow", self.translations["title"]))
         item = self.tableSearch.horizontalHeaderItem(1)
-        item.setText(_translate("MainWindow", "Autor"))
+        item.setText(_translate("MainWindow", self.translations["author"]))
         item = self.tableSearch.horizontalHeaderItem(2)
-        item.setText(_translate("MainWindow", "Género"))
+        item.setText(_translate("MainWindow", self.translations["genre"]))
         item = self.tableSearch.horizontalHeaderItem(3)
         item.setText(_translate("MainWindow", "ID"))
         item = self.tableSearch.horizontalHeaderItem(4)
-        item.setText(_translate("MainWindow", "Estado"))
+        item.setText(_translate("MainWindow", self.translations["state"]))
         item = self.tableSearch.horizontalHeaderItem(5)
-        item.setText(_translate("MainWindow", "Calificación"))
+        item.setText(_translate("MainWindow", self.translations["calification"]))
         item = self.tableSearch.horizontalHeaderItem(6)
-        item.setText(_translate("MainWindow", "Precio"))
+        item.setText(_translate("MainWindow", self.translations["price"]))
         self.tableSearch.resizeColumnsToContents()
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_search), _translate("MainWindow", "Busqueda"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_search), _translate("MainWindow", self.translations["search_tab"]))
         item = self.tableHistory.horizontalHeaderItem(0)
         item.setText(_translate("MainWindow", "ID"))
         item = self.tableHistory.horizontalHeaderItem(1)
-        item.setText(_translate("MainWindow", "ID del libro"))
+        item.setText(_translate("MainWindow", self.translations["book_id"]))
         item = self.tableHistory.horizontalHeaderItem(2)
-        item.setText(_translate("MainWindow", "Título del libro"))
+        item.setText(_translate("MainWindow", self.translations["book_title"]))
         item = self.tableHistory.horizontalHeaderItem(3)
-        item.setText(_translate("MainWindow", "Fecha de préstamo"))
+        item.setText(_translate("MainWindow", self.translations["loan_date"]))
         item = self.tableHistory.horizontalHeaderItem(4)
-        item.setText(_translate("MainWindow", "Fecha de devolución"))
+        item.setText(_translate("MainWindow", self.translations["return_date"]))
         item = self.tableHistory.horizontalHeaderItem(5)
-        item.setText(_translate("MainWindow", "Estado"))
+        item.setText(_translate("MainWindow", self.translations["state"]))
         self.tableHistory.resizeColumnsToContents()
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_history), _translate("MainWindow", "Historial de prestamos"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_history), _translate("MainWindow", self.translations["history"]))
 
         #LO MISMO DE ARRIBA
 
         item = self.tableOrder.horizontalHeaderItem(0)
-        item.setText(_translate("MainWindow", "Titulo"))
+        item.setText(_translate("MainWindow", self.translations["title"]))
         item = self.tableOrder.horizontalHeaderItem(1)
-        item.setText(_translate("MainWindow", "Autor"))
+        item.setText(_translate("MainWindow", self.translations["author"]))
         item = self.tableOrder.horizontalHeaderItem(2)
-        item.setText(_translate("MainWindow", "Genero"))
+        item.setText(_translate("MainWindow", self.translations["genre"]))
         item = self.tableOrder.horizontalHeaderItem(3)
-        item.setText(_translate("MainWindow", "Calificación"))
+        item.setText(_translate("MainWindow", self.translations["calification"]))
         item = self.tableOrder.horizontalHeaderItem(4)
-        item.setText(_translate("MainWindow", "Precio"))
+        item.setText(_translate("MainWindow", self.translations["price"]))
         item = self.tableOrder.horizontalHeaderItem(5)
-        item.setText(_translate("MainWindow", "Fecha de compra"))
+        item.setText(_translate("MainWindow", self.translations["purchase_date"]))
         self.tableOrder.resizeColumnsToContents()
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_orders), _translate("MainWindow", "Historial de compras"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_orders), _translate("MainWindow", self.translations["purchase_history"]))
 
-        self.btnCancelar.setText(_translate("MainWindow", "Cancelar reserva"))
-        self.btnDevolver.setText(_translate("MainWindow", "Devolver libro"))
-        self.btnCalificar.setText(_translate("MainWindow", "Calificar libro"))
+        self.btnCancelar.setText(_translate("MainWindow", self.translations["cancel_reserve"]))
+        self.btnDevolver.setText(_translate("MainWindow", self.translations["return_book"]))
+        self.btnCalificar.setText(_translate("MainWindow", self.translations["book_calification"]))
         item = self.tableMyBooks.horizontalHeaderItem(0)
         item.setText(_translate("MainWindow", "ID"))
         item = self.tableMyBooks.horizontalHeaderItem(1)
-        item.setText(_translate("MainWindow", "Título"))
+        item.setText(_translate("MainWindow", self.translations["title"]))
         item = self.tableMyBooks.horizontalHeaderItem(2)
-        item.setText(_translate("MainWindow", "Autor"))
+        item.setText(_translate("MainWindow", self.translations["author"]))
         item = self.tableMyBooks.horizontalHeaderItem(3)
-        item.setText(_translate("MainWindow", "ID Libro"))
+        item.setText(_translate("MainWindow", self.translations["book_id"]))
         item = self.tableMyBooks.horizontalHeaderItem(4)
-        item.setText(_translate("MainWindow", "Fecha de préstamo"))
+        item.setText(_translate("MainWindow", self.translations["loan_date"]))
         item = self.tableMyBooks.horizontalHeaderItem(5)
-        item.setText(_translate("MainWindow", "Fecha de devolución"))
+        item.setText(_translate("MainWindow", self.translations["return_date"]))
         item = self.tableMyBooks.horizontalHeaderItem(6)
-        item.setText(_translate("MainWindow", "Estado"))
+        item.setText(_translate("MainWindow", self.translations["state"]))
         item = self.tableMyBooks.horizontalHeaderItem(7)
-        item.setText(_translate("MainWindow", "Mi Calificación"))
+        item.setText(_translate("MainWindow", self.translations["calification"]))
         self.tableMyBooks.resizeColumnsToContents()
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_mybooks), _translate("MainWindow", "Mis libros"))
-        self.label_2.setText(_translate("MainWindow", "Iniciar Sesión"))
-        self.label_3.setText(_translate("MainWindow", "¿Aún no tienes una cuenta?"))
-        self.inputEmail.setPlaceholderText(_translate("MainWindow", "Correo electrónico"))
-        self.pushButton_8.setText(_translate("MainWindow", "Registrarse"))
-        self.btnLogin.setText(_translate("MainWindow", "Entrar"))
-        self.inputPassword.setPlaceholderText(_translate("MainWindow", "Contraseña"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_account), _translate("MainWindow", "Cuenta"))
-        self.btnLogout.setText(_translate("MainWindow", "  Cerrar Sesión"))
-        self.btnPay.setText(_translate("MainWindow", "   Pagar Saldo"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_user), _translate("MainWindow", "Datos de usuario"))
-        self.searchBar2.setPlaceholderText(_translate("MainWindow", "ID del libro a buscar"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_mybooks), _translate("MainWindow", self.translations["my_books"]))
+        self.label_2.setText(_translate("MainWindow", self.translations["login"]))
+        self.label_3.setText(_translate("MainWindow", self.translations["register_text"]))
+        self.inputEmail.setPlaceholderText(_translate("MainWindow", self.translations["mail"]))
+        self.pushButton_8.setText(_translate("MainWindow", self.translations["register"]))
+        self.btnLogin.setText(_translate("MainWindow", self.translations["enter"]))
+        self.inputPassword.setPlaceholderText(_translate("MainWindow", self.translations["password"]))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_account), _translate("MainWindow", self.translations["account"]))
+        self.btnLogout.setText(_translate("MainWindow", self.translations["logout"]))
+        self.btnPay.setText(_translate("MainWindow", self.translations["pay_balance"]))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_user), _translate("MainWindow", self.translations["user_info"]))
+        self.searchBar2.setPlaceholderText(_translate("MainWindow", self.translations["search_book_id"]))
         item = self.tableCalification.horizontalHeaderItem(0)
-        item.setText(_translate("MainWindow", "Título"))
+        item.setText(_translate("MainWindow", self.translations["title"]))
         item = self.tableCalification.horizontalHeaderItem(1)
-        item.setText(_translate("MainWindow", "Reseña"))
+        item.setText(_translate("MainWindow", self.translations["review"]))
         item = self.tableCalification.horizontalHeaderItem(2)
-        item.setText(_translate("MainWindow", "Calificación"))
+        item.setText(_translate("MainWindow", self.translations["calification"]))
         self.tableCalification.resizeColumnsToContents()
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_calification), _translate("MainWindow", "Calificaciones"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_calification), _translate("MainWindow", self.translations["calification_plural"]))
 
+    def change_language(self):
+        if self.language == 'en':
+            self.retranslateUi(self.main_window, 'es')
+        else:
+            self.retranslateUi(self.main_window, 'en')
 
     def registrarse(self):
         ventana_registro = VentanaRegistro()
@@ -1599,21 +1609,40 @@ class Ui_MainWindow(object):
             usuario_id = ventana_registro.insertar_usuarios()
             if usuario_id:
                 # Aquí puedes hacer lo que necesites con el ID del usuario
-                print("ID del usuario insertado:", usuario_id)
+                print(self.translations['inserted_user_id'], usuario_id)
                 self.account_id = usuario_id
+
+
+    def update_send_email(self, state):
+        """Actualiza el valor de 'send_email' en la base de datos al cambiar el QCheckBox."""
+        try:
+            conn = conectar()
+            cur = conn.cursor()
+
+            send_email_value = bool(state)
+            
+            cur.execute("UPDATE usuarios SET send_email = ? WHERE id = ?", (send_email_value, self.account_id))
+            conn.commit()
+        
+        except mariadb.Error as e:
+            QtWidgets.QMessageBox.critical(None, "Error", f"No se pudo actualizar el estado de envío de correos: {e}")
+        
+        finally:
+            if conn:
+                conn.close()
 
     def iniciar_sesion(self, showMessage):
         email = self.inputEmail.text()
         contraseña = self.inputPassword.text()
 
         if not email or not contraseña:
-            QtWidgets.QMessageBox.critical(None, "Error", "Por favor, ingrese email y contraseña.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations["insert_emailandpassword"])
             return
 
         try:
             conn = conectar()
             cur = conn.cursor()
-            cur.execute("SELECT id, name, last_name1, last_name2, credit, email FROM usuarios WHERE email = ? AND password = ?", (email, contraseña))
+            cur.execute("SELECT id, name, last_name1, last_name2, credit, email, send_emailggi FROM usuarios WHERE email = ? AND password = ?", (email, contraseña))
             usuario = cur.fetchone()
 
             if usuario:
@@ -1621,22 +1650,24 @@ class Ui_MainWindow(object):
                 self.credit = usuario[4]
                 self.account_email = usuario[5]
                 self.tabWidget.setCurrentIndex(3)  # Cambia a la pestaña tab_account
-                self.labelNombre.setText("Nombre: " + usuario[1] + " " + usuario[2] + " " + usuario[3])
-                self.labelCredit.setText(f"Saldo pendiente: ${str(self.credit)}")
+                self.labelNombre.setText(self.translations['name_4'] + usuario[1] + " " + usuario[2] + " " + usuario[3])
+                self.labelCredit.setText(f"{self.translations['pending_pay2']}{str(self.credit)}")
                 self.labelUserID.setText(f"ID: {str(self.account_id)}")
-                # self.labelApellido2.setText("Apellido Materno: " + usuario[3])
+                self.send_email_checkbox.setText("Enviar correos")
+                self.send_email_checkbox.setChecked(usuario[6])
+                self.send_email_checkbox.stateChanged.connect(self.update_send_email)
                 if(showMessage):
-                    QtWidgets.QMessageBox.information(None, "Inicio de sesión exitoso", f"¡Bienvenido {usuario[1]} {usuario[2]} {usuario[3]}!")
+                    QtWidgets.QMessageBox.information(None, self.translations['login_confirmation'], f"¡{self.translations['welcome']} {usuario[1]} {usuario[2]} {usuario[3]}!")
                 self.guardar_credenciales(email, contraseña)
                 self.tabWidget.removeTab(5)  # Oculta la pestaña tab_user al iniciar sesión
-                self.tabWidget.insertTab(5, self.tab_user, "Datos de usuario")  # Muestra la pestaña tab_user al cerrar sesión
+                self.tabWidget.insertTab(5, self.tab_user, self.translations['user_info'])  # Muestra la pestaña tab_user al cerrar sesión
                 self.tabWidget.setCurrentIndex(0)  # Cambia a la pestaña tab_account
             else:
                 if(showMessage):
-                    QtWidgets.QMessageBox.critical(None, "Error", "Credenciales inválidas.\n¿El usuario está registrado?")
+                    QtWidgets.QMessageBox.critical(None, "Error", self.translations['wrong_credentials'])
 
         except mariadb.Error as e:
-            QtWidgets.QMessageBox.critical(None, "Error", f"Error al iniciar sesión: {e}")
+            QtWidgets.QMessageBox.critical(None, "Error", f"{self.translations['login_erorr']} {e}")
 
         finally:
             if conn:
@@ -1672,10 +1703,71 @@ class Ui_MainWindow(object):
             credenciales = json.loads(credenciales_desencriptadas)
             self.inputEmail.setText(credenciales['email'])
             self.inputPassword.setText(credenciales['contraseña'])
+            account_id = self.obtener_id_usuario_por_email(credenciales['email'])
+            if account_id is None:
+                QtWidgets.QMessageBox.warning(None, self.translations['warning'], self.translations['id_not_found'])
+                return
             self.iniciar_sesion(showMessage=False)  # Evitar que se muestre el mensaje al cargar las credenciales
+            self.sancionar_usuarios(self.account_id, self.main_window)
         except (json.JSONDecodeError, InvalidToken):
-            QtWidgets.QMessageBox.critical(None, "Error", "El archivo de credenciales no tiene un formato JSON válido o la clave de encriptación es incorrecta.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['credentials_error'])
             return
+        
+    def obtener_id_usuario_por_email(self, email):
+        conn = conectar()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id FROM usuarios WHERE email = ?", (email,))
+                resultado = cursor.fetchone()
+                if resultado:
+                    return resultado[0]  # Retorna el id del usuario
+                else:
+                    QtWidgets.QMessageBox.information(self, self.translations['user_not_found'] , self.translations['user_not_,match'])
+                    return None
+            except mariadb.Error as e:
+                print(f"{self.translations['error_obtain_id']} {e}")
+                return None
+            finally:
+                conn.close()
+        else:
+            QtWidgets.QMessageBox.critical(self, "Error", self.translations['error_message'])
+            return None
+        
+    def sancionar_usuarios(self, account_id, parent):
+        try:
+            conn = conectar()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT DATEDIFF(NOW(), fecha_devolucion) as dias_retraso FROM prestamo WHERE id_usuario = ? AND fecha_devolucion < NOW() AND devuelto = 0", (account_id,))
+                resultado = cursor.fetchone()
+                if resultado:
+                    dias_retraso = resultado[0]
+                    if dias_retraso > 0:
+                        if dias_retraso <= 7:
+                            multa = dias_retraso * 5
+                            cursor.execute("UPDATE usuarios SET multa = multa + ? WHERE id = ?", (multa, account_id))
+                            conn.commit()
+                            QtWidgets.QMessageBox.information(parent, self.translations['sanction_applied'] , f"{self.translations['sanction_info']} {multa} {self.translations['sanction_info2']} {dias_retraso} {self.translations['sanction_info']}")
+                            if not self.pay():
+                                QApplication.quit()
+                        else:
+                            cursor.execute("UPDATE usuarios SET cuenta_cancelada = 2, multa = 10 WHERE id = ?", (account_id,))
+                            conn.commit()
+                            QtWidgets.QMessageBox.information(parent, self.translations['sanction_applied'], self.translations['sanction_info4'])
+                            self.sancion_aplicada = True
+                            if not self.pay():
+                                QApplication.quit()
+                else:
+                    QtWidgets.QMessageBox.information(parent, self.translations['information'], self.translations['no_books_returned'])
+                conn.commit()
+            else:
+                QtWidgets.QMessageBox.critical(parent, "Error", self.translations['error_message'])
+        except mariadb.Error as e:
+            print(f"{self.translations['bd_error']} {e}")
+        finally:
+            if conn:
+                conn.close()
 
     # Método para cargar la clave de encriptación        
     def cargar_clave(self):
@@ -1707,7 +1799,7 @@ class Ui_MainWindow(object):
             self.inputEmail.clear()
             self.inputPassword.clear()
             self.tabWidget.removeTab(5)  # Oculta la pestaña tab_user al cerrar sesión
-            self.tabWidget.insertTab(5, self.tab_account, "Cuenta")  # Muestra la pestaña tab_user al cerrar sesión
+            self.tabWidget.insertTab(5, self.tab_account, self.translations['account'])  # Muestra la pestaña tab_user al cerrar sesión
             self.tabWidget.setCurrentIndex(3)  # Cambia a la pestaña tab_account
 
     # Busqueda por título
@@ -1717,7 +1809,7 @@ class Ui_MainWindow(object):
             query = f"SELECT * FROM libro WHERE titulo LIKE '%{title}%'"
             self.mostrar_resultados(query, "título", title)
         else:
-            QtWidgets.QMessageBox.critical(None, "Error", "Primero escribe algo en el buscador.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['error_search'])
 
     def searchReview(self):
         id_libro = self.searchBar2.text()
@@ -1725,7 +1817,7 @@ class Ui_MainWindow(object):
             query = f"SELECT libro.titulo, calificaciones.reseña, calificaciones.calificacion FROM libro INNER JOIN calificaciones ON libro.id = calificaciones.id_libro WHERE libro.id = {id_libro}"
             self.mostrar_resultados_review(query, "ID", id_libro)
         else:
-            QtWidgets.QMessageBox.critical(None, "Error", "Primero escribe algo en el buscador.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['error_search'])
 
     # Busqueda por autor
     def searchAuthor(self):
@@ -1734,7 +1826,7 @@ class Ui_MainWindow(object):
             query = f"SELECT * FROM libro WHERE autor LIKE '%{author}%'"
             self.mostrar_resultados(query, "autor", author)
         else:
-            QtWidgets.QMessageBox.critical(None, "Error", "Primero escribe algo en el buscador.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['error_search'])
 
     # Busqueda por genero
     def searchGenre(self):
@@ -1743,7 +1835,7 @@ class Ui_MainWindow(object):
             query = f"SELECT * FROM libro WHERE genero LIKE '%{genre}%'"
             self.mostrar_resultados(query, "género", genre)
         else:
-            QtWidgets.QMessageBox.critical(None, "Error", "Primero escribe algo en el buscador.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['error_search'])
 
     def mostrar_resultados_review(self, query, tipo_busqueda, busqueda):
         try:
@@ -1767,7 +1859,7 @@ class Ui_MainWindow(object):
                 self.tableCalification.resizeColumnsToContents()
                 
                 if not found:
-                    QtWidgets.QMessageBox.information(None, "Información", f"No se encontraron resultados para el {tipo_busqueda} '{busqueda}'.")
+                    QtWidgets.QMessageBox.information(None, self.translations['information'], f"{self.translations['no_results']} {tipo_busqueda} '{busqueda}'.")
                     
                 # Aquí ajustamos el tamaño de las columnas y la tabla
                 header = self.tableCalification.horizontalHeader()
@@ -1778,7 +1870,7 @@ class Ui_MainWindow(object):
                 self.tableCalification.horizontalHeader().setStretchLastSection(True)
                 
             else:
-                QtWidgets.QMessageBox.information(None, "Información", f"No se encontraron resultados para el {tipo_busqueda} '{busqueda}'.")
+                QtWidgets.QMessageBox.information(None, self.translations['information'], f"{self.translations['no_results']} {tipo_busqueda} '{busqueda}'.")
         except Exception as e:
             print("Error al mostrar resultados:", e)
 
@@ -1798,7 +1890,7 @@ class Ui_MainWindow(object):
 
                     for column_number, index in enumerate(data_order):
                         if index == 2:  # Si la columna es la del estado
-                            estado = "Disponible" if row_data[index] == 1 else "No disponible"
+                            estado = self.translations['available'] if row_data[index] == 1 else self.translations['not_available']
                             item = QTableWidgetItem(estado)
                         else:
                             item = QTableWidgetItem(str(row_data[index]))
@@ -1813,7 +1905,7 @@ class Ui_MainWindow(object):
                 self.tableSearch.resizeColumnsToContents()
                 
                 if not found:
-                    QtWidgets.QMessageBox.information(None, "Información", f"No se encontraron resultados para el {tipo_busqueda} '{busqueda}'.")
+                    QtWidgets.QMessageBox.information(None, self.translations['information'], f"{self.translations['no_results']} {tipo_busqueda} '{busqueda}'.")
                     
                 # Aquí ajustamos el tamaño de las columnas y la tabla
                 header = self.tableSearch.horizontalHeader()
@@ -1828,9 +1920,9 @@ class Ui_MainWindow(object):
                 self.tableSearch.horizontalHeader().setStretchLastSection(True)
                 
             else:
-                QtWidgets.QMessageBox.information(None, "Información", f"No se encontraron resultados para el {tipo_busqueda} '{busqueda}'.")
+                QtWidgets.QMessageBox.information(None, self.translations['information'], f"{self.translations['no_results']} {tipo_busqueda} '{busqueda}'.")
         except Exception as e:
-            print("Error al mostrar resultados:", e)
+            print(self.translations['error_results'], e)
 
     # Método para realizar una consulta en la base de datos
     def consulta(self, query, values=None):
@@ -1846,8 +1938,31 @@ class Ui_MainWindow(object):
                     cur.execute(query)
                 return cur
         except Exception as e:
-            print("Error al ejecutar la consulta:", e)
+            print(self.translations['response_error'], e)
             return None
+        finally:
+            if conn:
+                conn.close()
+
+    def obtener_send_email(self, user_id):
+        """Obtiene el valor del atributo 'send_email' de un usuario específico en la base de datos."""
+        try:
+            conn = conectar()
+            cur = conn.cursor()
+
+            # Consulta para obtener solo el valor de 'send_email' para el usuario dado
+            cur.execute("SELECT send_email FROM usuarios WHERE id = ?", (user_id,))
+            result = cur.fetchone()
+
+            if result:
+                return result[0]  # Retorna el valor de send_email (True o False)
+            else:
+                return None  # Retorna None si no se encontró el usuario
+
+        except mariadb.Error as e:
+            QtWidgets.QMessageBox.critical(None, "Error", f"No se pudo obtener el valor de send_email: {e}")
+            return None
+
         finally:
             if conn:
                 conn.close()
@@ -1856,7 +1971,7 @@ class Ui_MainWindow(object):
     def reservar(self):
         # Verificar si el usuario ha iniciado sesión
         if self.account_id == 0:
-            QtWidgets.QMessageBox.critical(None, "Error", "Debes iniciar sesión para reservar un libro.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['reserved_log'])
             return
         # Obtener el índice de la fila seleccionada
         selected_row = self.tableSearch.currentRow()
@@ -1869,7 +1984,7 @@ class Ui_MainWindow(object):
 
             # Verificar si el libro está disponible
             if disponibilidad == 'Disponible':
-                reply = QMessageBox.question(None, 'Reserva', 'El costo por reserva de cada libro es de $7.00 MXN por día, se te dará un limite de 15 días para retornarlo. Si no se devuelve a tiempo se cobrará una multa de $20 por cáda día que pase.\n(Es posible devolver antes el libro, solo se te cobrará lo correspondiente)',
+                reply = QMessageBox.question(None, self.translations['reserve'], self.translations['reserved_info'],
                             QMessageBox.Ok | QMessageBox.Cancel, QMessageBox.Cancel)
                 if reply == QMessageBox.Ok:
                     # Obtener la fecha actual
@@ -1887,22 +2002,22 @@ class Ui_MainWindow(object):
                     values = (id_pedido, fecha_devolucion, fecha_prestamo, id_usuario, id_libro)
                     self.ejecutar_query(query, values)
                     if id_pedido:
-                        self.correo_pedido(id_pedido, fecha_prestamo, fecha_devolucion, titulo, autor)
+                        if self.obtener_send_email(self.account_id) is True: self.correo_pedido(id_pedido, fecha_prestamo, fecha_devolucion, titulo, autor)
                         # Cambiar la disponibilidad del libro a 0
                         query = "UPDATE libro SET disponibilidad = 0 WHERE id = ?"
                         values = (id_libro,)
                         self.ejecutar_query(query, values)
                         
-                        QtWidgets.QMessageBox.information(None, "Información", "Libro reservado con éxito.")
-                        self.tableSearch.item(selected_row, 4).setText("No disponible")
+                        QtWidgets.QMessageBox.information(None, self.translations['information'], self.translations['book_reserve_success'])
+                        self.tableSearch.item(selected_row, 4).setText(self.translations['available'])
             else:
-                QtWidgets.QMessageBox.critical(None, "Error", "El libro seleccionado no está disponible.")
+                QtWidgets.QMessageBox.critical(None, "Error", self.translations['book_not_available'])
         else:
-            QtWidgets.QMessageBox.critical(None, "Error", "Selecciona un libro para reservar.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['book_select'])
     
     def comprar(self):
         if self.account_id == 0:
-            QtWidgets.QMessageBox.critical(None, "Error", "Debes iniciar sesión para reservar un libro.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['book_buy_log'])
             return
         
         selected_row = self.tableSearch.currentRow()
@@ -1913,20 +2028,20 @@ class Ui_MainWindow(object):
         precio = self.tableSearch.item(selected_row, 6).text()  # Título del libro
 
         if selected_row < 0:
-            QtWidgets.QMessageBox.critical(None, "Error", "Selecciona un libro para comprar")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['book_buy_select'])
             return
 
         if disponibilidad == 'No disponible':
-            QtWidgets.QMessageBox.critical(None, "Error", "No hay libros disponibles para comprar")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['book_buy_not_available'])
             return
         
-        reply = QMessageBox.question(None, 'Comprar libro', 'Confirmar compra del libro: ' + titulo,
+        reply = QMessageBox.question(None, self.translations['comprar_libro'], self.translations['confirm_buy'] + titulo,
                     QMessageBox.Ok | QMessageBox.Cancel, QMessageBox.Cancel)
         
         if reply != QMessageBox.Ok:
             return
         
-        pago = VentanaPago(self.account_id, precio, self.account_email, self.main_window)
+        pago = VentanaPago(self.account_id, precio, self.account_email)
         pago.exec_()
 
         if pago.payBook():
@@ -1942,7 +2057,7 @@ class Ui_MainWindow(object):
             values = (id_libro,)
             self.ejecutar_query(query, values)
 
-            QtWidgets.QMessageBox.information(None, "Información", "Libro comprado con éxito.")
+            QtWidgets.QMessageBox.information(None, self.translations['information'], self.translations['book_success'])
         
 
     # Método para ejecutar una consulta en la base de datos
@@ -1955,7 +2070,7 @@ class Ui_MainWindow(object):
                 conn.commit()
                 return cur.lastrowid
         except Exception as e:
-            print("Error al ejecutar la consulta:", e)
+            print(self.translations['response_error'], e)
         finally:
             if conn:
                 conn.close()
@@ -1980,9 +2095,9 @@ class Ui_MainWindow(object):
                 cur = conn.cursor()
                 cur.execute(query, values)
                 conn.commit()
-                print("Datos insertados correctamente.")
+                print(self.translations['insert_data_correct'])
         except Exception as e:
-            print(f"Error al insertar datos: {e}")
+            print(f"{self.translations['insert_data_error']}{e}")
         finally:
             if conn:
                 conn.close()
@@ -1994,7 +2109,7 @@ class Ui_MainWindow(object):
         self.tableMyBooks.setRowCount(0)
         # Verificar si el usuario ha iniciado sesión
         if self.account_id == 0:
-            QtWidgets.QMessageBox.critical(None, "Error", "Debes iniciar sesión para ver tus libros.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['mybooks_log'])
             return
         # Obtener los préstamos del usuario actual
         query = "SELECT prestamo.id, libro.titulo, libro.autor, libro.id, prestamo.fecha_prestamo, prestamo.fecha_devolucion, prestamo.devuelto, libro.calificacion FROM prestamo INNER JOIN libro ON prestamo.id_libro = libro.id WHERE prestamo.id_usuario = ?"
@@ -2007,9 +2122,9 @@ class Ui_MainWindow(object):
                     item = QTableWidgetItem(str(data))
                     if column_number == 6:  # Columna 6
                         if data == 0:
-                            item.setText("Reservado")
+                            item.setText(self.translations['reserved'])
                         elif data == 2:
-                            item.setText("Cancelado")
+                            item.setText(self.translations['canceled'])
 
                     # Insertar el item en la tabla
                     self.tableMyBooks.setItem(row_number, column_number, item)
@@ -2029,7 +2144,7 @@ class Ui_MainWindow(object):
             self.tableMyBooks.horizontalHeader().setStretchLastSection(True)
             
         else:
-            QtWidgets.QMessageBox.information(None, "Información", "No tienes libros reservados.")
+            QtWidgets.QMessageBox.information(None, self.translations['information'], self.translations['no_books'])
 
     # Actualizar el historial de préstamos del usuario actual
     def actualizar_historial(self):
@@ -2037,7 +2152,7 @@ class Ui_MainWindow(object):
         self.tableHistory.clearContents()
         self.tableHistory.setRowCount(0)
         if self.account_id == 0:
-            QtWidgets.QMessageBox.critical(None, "Error", "Debes iniciar sesión para ver tu historial.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['history_log'])
             return
         # Obtener el historial del usuario actual
         query = "SELECT h.id, l.id, l.titulo, h.fecha_prestamo, h.fecha_devolucion, h.devuelto FROM historial AS h INNER JOIN libro AS l ON h.id_libro = l.id WHERE h.id_usuario = ?"
@@ -2051,11 +2166,11 @@ class Ui_MainWindow(object):
                     item.setTextAlignment(QtCore.Qt.AlignCenter)
                     if column_number == 5:  # Verificar si estamos en la columna de "devuelto"
                         if data == 0:
-                            item.setText("Reservado")
+                            item.setText(self.translations['reserved'])
                         elif data == 1:
-                            item.setText("Devuelto")
+                            item.setText(self.translations['returned'])
                         elif data == 2:
-                            item.setText("Cancelado")
+                            item.setText(self.translations['canceled'])
                     # Insertar el item en la tabla
                     self.tableHistory.setItem(row_number, column_number, item)
             
@@ -2071,14 +2186,14 @@ class Ui_MainWindow(object):
             self.tableHistory.horizontalHeader().setStretchLastSection(True)
             
         else:
-            QtWidgets.QMessageBox.information(None, "Información", "No tienes historial de préstamos.")
+            QtWidgets.QMessageBox.information(None, self.translations['information'], self.translations['no_books_history'])
 
     def show_orders(self):
         # Limpiar la tabla
         self.tableOrder.clearContents()
         self.tableOrder.setRowCount(0)
         if self.account_id == 0:
-            QtWidgets.QMessageBox.critical(None, "Error", "Debes iniciar sesión para ver tu historial.")
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['history_log'])
             return
         # Obtener el historial del usuario actual
         query = "SELECT l.titulo, l.autor, l.genero, l.calificacion, l.precio, o.fecha FROM orden o JOIN libro l ON o.id_libro = l.id WHERE o.id_usuario = ?"
@@ -2105,7 +2220,7 @@ class Ui_MainWindow(object):
             self.tableOrder.horizontalHeader().setStretchLastSection(True)
             
         else:
-            QtWidgets.QMessageBox.information(None, "Información", "No tienes historial de préstamos.")
+            QtWidgets.QMessageBox.information(None, self.translations['information'], self.translations['no_books_history'])
 
     # Cancelar un préstamo
     def cancelar_reserva(self):
@@ -2130,17 +2245,17 @@ class Ui_MainWindow(object):
                     # Borrar la tupla de la tabla 'prestamo' con 'id' = id_prestamo
                     query3 = "DELETE FROM prestamo WHERE id = ?"
                     self.ejecutar_query(query3, (id_prestamo,))
-                    self.correo_cancelacion(id_prestamo)
-                    QtWidgets.QMessageBox.information(None, "Cancelación de reserva", "Reserva cancelada con éxito.")
+                    if self.obtener_send_email(self.account_id) is True: self.correo_cancelacion(id_prestamo)
+                    QtWidgets.QMessageBox.information(None, self.translations['reserve_cancel'], self.translations['reserved_cancel'])
 
                     # Actualizar la tabla de mis libros
                     self.actualizar_mis_libros()
 
                 except mariadb.Error as e:
-                    QtWidgets.QMessageBox.critical(None, "Error", f"Error al cancelar reserva: {e}")
+                    QtWidgets.QMessageBox.critical(None, "Error", f"{self.translations['reserved_cancel_error']} {e}")
 
             else:
-                QtWidgets.QMessageBox.warning(None, "Error", "Solo puedes cancelar reservas que se han hecho el mismo día.")
+                QtWidgets.QMessageBox.warning(None, "Error", self.translations['reserved_cancel_day'])
 
     # Devolver un libro
     def devolver_reserva(self):
@@ -2157,9 +2272,15 @@ class Ui_MainWindow(object):
             
             # Calcular la diferencia de días
             dias_diferencia = (fecha_hoy_sin_tiempo - fecha_prestamo).days
+            print(dias_diferencia)
+
             # Si se pasa de los 15 días, agregar la multa de $20 por día adicional
             if dias_diferencia > 15:
                 costo = (dias_diferencia - 15) * 20
+            elif dias_diferencia <= 15:
+                QtWidgets.QMessageBox.information(None, self.translations['congratulations'], self.translations['discount_obtain'])
+                costo = max(0, dias_diferencia) * 0.8
+                print (costo)
             else:
                 costo = max(0, dias_diferencia) * 7
             try:
@@ -2186,14 +2307,14 @@ class Ui_MainWindow(object):
                 # Borrar la tupla de la tabla 'prestamo' con 'id' = id_prestamo
                 query3 = "DELETE FROM prestamo WHERE id = ?"
                 self.ejecutar_query(query3, (id_prestamo,))
-                self.correo_devolucion(id_prestamo, fecha_devolucion, costo)
-                QtWidgets.QMessageBox.information(None, "Devolución de reserva", f"Libro devuelto con éxito.\nCosto: ${costo}")
+                if self.obtener_send_email(self.account_id) is True: self.correo_devolucion(id_prestamo, fecha_devolucion, costo)
+                QtWidgets.QMessageBox.information(None, self.translations['returned_reserve'], f"{self.translations['book_returned']}{costo}")
 
                 # Actualizar la tabla de mis libros
                 self.actualizar_mis_libros()
 
             except mariadb.Error as e:
-                QtWidgets.QMessageBox.critical(None, "Error", f"Error al devolver reserva: {e}")
+                QtWidgets.QMessageBox.critical(None, "Error", f"{self.translations['book_returned_error'] }{e}")
 
     # Actualizar tablas al cambiar de pestaña
     def tab_changed(self):
@@ -2209,7 +2330,7 @@ class Ui_MainWindow(object):
     # Actualizar el crédito del usuario
     def actualizar_usuario(self):
         if self.account_id != 0:
-            self.labelCredit.setText(f"Saldo pendiente: ${str(self.credit)}")
+            self.labelCredit.setText(f"{self.translations['saldo_pending']}{str(self.credit)}")
 
     # Método para enviar un correo electrónico al realizar un pedido
     def correo_pedido(self, id_pedido, fecha_prestamo, fecha_devolucion, titulo, autor):
@@ -2304,15 +2425,12 @@ Gracias por tu preferencia.
                 print("Dirección de correo electrónico no válida.")
     
     # Método para pagar el saldo pendiente
-    def pay(self):
+    def pay(self): #NO TOCAR
         if self.credit == 0:
-            QtWidgets.QMessageBox.information(None, "Saldo pendiente", "Actualmente no tienes saldo pendiente por pagar.")
+            QtWidgets.QMessageBox.information(None, self.translations['saldo_pending'], self.translations['not_saldo_pending'])
             return
         else:
-            ventana_pago = VentanaPago(self.account_id, self.credit, self.account_email, self.main_window)  # Pasa main_window aquí
-            if not self.sancion_aplicada:
-                ventana_pago.sancionar_usuarios()
-                self.sancion_aplicada = True  # Actualizar la bandera después de llamar a sancionar_usuarios
+            ventana_pago = VentanaPago(self.account_id, self.credit, self.account_email)  # Pasa main_window aquí
             ventana_pago.exec_()
 
     def calificar(self):
@@ -2323,43 +2441,7 @@ Gracias por tu preferencia.
             ventana_calificar = VentanaCalificar(self.account_id, titulo_libro, id_libro)
             ventana_calificar.exec_()
         else:
-            QtWidgets.QMessageBox.critical(None, "Error", "Selecciona un libro para calificar.")
-
-    def sancionar_usuarios(self):
-        try:
-            conn = conectar()
-            if conn:
-                cursor = conn.cursor()
-                # Obtener solo el usuario que ha iniciado sesión
-                cursor.execute("SELECT DATEDIFF(NOW(), fecha_prestamo) as dias_retraso FROM prestamo WHERE id_usuario = ? AND fecha_prestamo < NOW() AND devuelto = 0", (self.account_id,))
-                resultado = cursor.fetchone()  # Usamos fetchone() para obtener solo una fila
-
-                if resultado:  # Verificamos si se encontró un resultado
-                    dias_retraso = resultado[0]  # Días de retraso
-                    if dias_retraso > 0:
-                        if dias_retraso <= 7:
-                            multa = dias_retraso * 5  # Multa de 5 unidades por día de retraso
-                            cursor.execute("UPDATE usuarios SET multa = multa + ? WHERE id = ?", (multa, self.account_id))
-                            conn.commit()
-                            QtWidgets.QMessageBox.information(self.main_window, "Sanción aplicada", f"Se ha aplicado una multa de {multa} unidades por {dias_retraso} días de retraso.")
-                            conn.commit()
-                        else:
-                            cursor.execute("UPDATE usuarios SET cuenta_cancelada = 2, multa = 10 WHERE id = ?", (self.account_id,))
-                            conn.commit()
-                            QtWidgets.QMessageBox.information(self.main_window, "Sanción aplicada", "Se ha cancelado la cuenta del usuario por más de 7 días de retraso.")
-                            conn.commit()
-                else:
-                    QtWidgets.QMessageBox.information(self.main_window, "Información", "No hay libros no devueltos a tiempo.")
-                
-                conn.commit()  # Asegúrate de hacer commit para guardar los cambios en la base de datos
-            else:
-                QtWidgets.QMessageBox.critical(self.main_window, "Error", "No se pudo conectar a la base de datos.")
-        except mariadb.Error as e:
-            print(f"Error al actualizar la base de datos: {e}")
-        finally:
-            if conn:
-                conn.close()
-
+            QtWidgets.QMessageBox.critical(None, "Error", self.translations['select_book'])
 
 if __name__ == "__main__":
     import sys
@@ -2368,4 +2450,5 @@ if __name__ == "__main__":
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
     MainWindow.show()
+
     sys.exit(app.exec_())
