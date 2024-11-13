@@ -1642,7 +1642,7 @@ class Ui_MainWindow(object):
         try:
             conn = conectar()
             cur = conn.cursor()
-            cur.execute("SELECT id, name, last_name1, last_name2, credit, email, send_emailggi FROM usuarios WHERE email = ? AND password = ?", (email, contraseña))
+            cur.execute("SELECT id, name, last_name1, last_name2, credit, email, send_email FROM usuarios WHERE email = ? AND password = ?", (email, contraseña))
             usuario = cur.fetchone()
 
             if usuario:
