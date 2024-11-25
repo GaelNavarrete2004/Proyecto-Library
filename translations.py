@@ -145,6 +145,10 @@ languages = {
         'saldo_pending': 'Saldo pendiente: $',
         'not_saldo_pending': 'Actualmente no tienes saldo pendiente por pagar.',
         'select_book': 'Selecciona un libro para calificar.',
+<<<<<<< Updated upstream
+=======
+        'send_email': 'Enviar correo',
+>>>>>>> Stashed changes
 
     },
     'en': {
@@ -291,6 +295,11 @@ languages = {
         'saldo_pending': 'Pending balance: $',
         'not_saldo_pending': 'You currently have no pending balance to pay.',
         'select_book': 'Select a book to rate.',
+<<<<<<< Updated upstream
+=======
+        'book_reserve_success': 'Book reserved successfully.',
+        'send_email': 'Send email',
+>>>>>>> Stashed changes
     }
 }
 
