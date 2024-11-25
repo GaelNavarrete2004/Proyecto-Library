@@ -541,10 +541,7 @@ class VentanaPago(QDialog):
 
 {self.translations['pay_confirm']}
     """
-<<<<<<< Updated upstream
-=======
             print("Bool: ", self.obtener_send_email(self.account_id))
->>>>>>> Stashed changes
             if self.obtener_send_email(self.account_id) is True:
                 email_reciver = self.account_email
                 if re.match(email_regex, email_reciver):
@@ -844,11 +841,6 @@ class Ui_MainWindow(object):
 "        }")
         self.btnChangeLanguage = QtWidgets.QPushButton(self.centralwidget)
         self.btnChangeLanguage.setObjectName("btnChangeLanguage")
-<<<<<<< Updated upstream
-        self.gridLayout.addWidget(self.btnChangeLanguage, 0, 0, 1, 1)
-        self.btnChangeLanguage.clicked.connect(self.change_language)
-        
-=======
         icon = QtGui.QIcon(os.path.join(script_dir, 'imagenes/ingles.png'))
         self.btnChangeLanguage.setIcon(icon)
         self.btnChangeLanguage.clicked.connect(self.change_language)
@@ -859,7 +851,6 @@ class Ui_MainWindow(object):
         self.bottomLayout.addWidget(self.btnChangeLanguage)
         self.gridLayout.addLayout(self.bottomLayout, 2, 0, 1, 1)
         
->>>>>>> Stashed changes
         self.tabWidget.setObjectName("tabWidget")
         self.tab_search = QtWidgets.QWidget()
         self.tab_search.setObjectName("tab_search")
@@ -1518,10 +1509,6 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", f"LibraryPy - {version}"))
         icon = os.path.join(script_dir, 'imagenes/icon.ico').replace("\\", "/")
         MainWindow.setWindowIcon(QIcon(icon))
-<<<<<<< Updated upstream
-        self.btnChangeLanguage.setText(_translate("MainWindow", self.translations["change_language"]))
-=======
->>>>>>> Stashed changes
         self.btnComprar.setText(_translate("MainWindow", self.translations["buy"]))
         self.btnReservar.setText(_translate("MainWindow", self.translations["reserve"]))
         self.btnSearchAutor.setText(_translate("MainWindow", self.translations["search_author"]))
@@ -1608,12 +1595,9 @@ class Ui_MainWindow(object):
         self.btnPay.setText(_translate("MainWindow", self.translations["pay_balance"]))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_user), _translate("MainWindow", self.translations["user_info"]))
         self.searchBar2.setPlaceholderText(_translate("MainWindow", self.translations["search_book_id"]))
-<<<<<<< Updated upstream
-=======
         
         #LO MISMO DE ARRIBA PARA LA TAB DE USUARIOS YA INICIADOS
         
->>>>>>> Stashed changes
         item = self.tableCalification.horizontalHeaderItem(0)
         item.setText(_translate("MainWindow", self.translations["title"]))
         item = self.tableCalification.horizontalHeaderItem(1)
@@ -1626,10 +1610,6 @@ class Ui_MainWindow(object):
     def change_language(self):
         if self.language == 'en':
             self.retranslateUi(self.main_window, 'es')
-<<<<<<< Updated upstream
-        else:
-            self.retranslateUi(self.main_window, 'en')
-=======
             icon = QtGui.QIcon(os.path.join(script_dir, 'imagenes/español.png'))
             self.btnChangeLanguage.setIcon(icon)
             self.actualizar_usuario()
@@ -1639,7 +1619,6 @@ class Ui_MainWindow(object):
             icon = QtGui.QIcon(os.path.join(script_dir, 'imagenes/ingles.png'))
             self.btnChangeLanguage.setIcon(icon)
             self.actualizar_usuario()
->>>>>>> Stashed changes
 
     def registrarse(self):
         ventana_registro = VentanaRegistro()
@@ -1691,11 +1670,7 @@ class Ui_MainWindow(object):
                 self.labelNombre.setText(self.translations['name_4'] + usuario[1] + " " + usuario[2] + " " + usuario[3])
                 self.labelCredit.setText(f"{self.translations['pending_pay2']}{str(self.credit)}")
                 self.labelUserID.setText(f"ID: {str(self.account_id)}")
-<<<<<<< Updated upstream
-                self.send_email_checkbox.setText("Enviar correos")
-=======
                 self.send_email_checkbox.setText(self.translations['send_email'])
->>>>>>> Stashed changes
                 self.send_email_checkbox.setChecked(usuario[6])
                 self.send_email_checkbox.stateChanged.connect(self.update_send_email)
                 if(showMessage):
@@ -2025,11 +2000,7 @@ class Ui_MainWindow(object):
             autor = self.tableSearch.item(selected_row, 1).text()  # Autor del libro
 
             # Verificar si el libro está disponible
-<<<<<<< Updated upstream
-            if disponibilidad == 'Disponible':
-=======
             if disponibilidad == 'Available':
->>>>>>> Stashed changes
                 reply = QMessageBox.question(None, self.translations['reserve'], self.translations['reserved_info'],
                             QMessageBox.Ok | QMessageBox.Cancel, QMessageBox.Cancel)
                 if reply == QMessageBox.Ok:
@@ -2376,9 +2347,6 @@ class Ui_MainWindow(object):
     # Actualizar el crédito del usuario
     def actualizar_usuario(self):
         if self.account_id != 0:
-<<<<<<< Updated upstream
-            self.labelCredit.setText(f"{self.translations['saldo_pending']}{str(self.credit)}")
-=======
             try:
                 conn = conectar()
                 cur = conn.cursor()
@@ -2396,7 +2364,6 @@ class Ui_MainWindow(object):
             finally:
                 if conn:
                     conn.close()
->>>>>>> Stashed changes
 
     # Método para enviar un correo electrónico al realizar un pedido
     def correo_pedido(self, id_pedido, fecha_prestamo, fecha_devolucion, titulo, autor):
