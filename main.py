@@ -2366,7 +2366,7 @@ Gracias por tu preferencia.
         if selected_row >= 0:
             titulo_libro = self.tableMyBooks.item(selected_row, 1).text()  # Nombre del libro
             id_libro = int(self.tableMyBooks.item(selected_row, 3).text()) 
-            ventana_calificar = VentanaCalificar(self.account_id, titulo_libro, id_libro)
+            ventana_calificar = VentanaCalificar(self.account_id, titulo_libro, id_libro, main_language)
             ventana_calificar.exec_()
         else:
             QtWidgets.QMessageBox.critical(None, "Error", self.translations['select_book'])
