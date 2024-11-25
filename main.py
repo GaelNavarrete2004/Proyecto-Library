@@ -316,120 +316,7 @@ class VentanaPago(QDialog):
 
         self.setLayout(layout)
         self.center()
-
-
-    # def init_ui2(self):
-    #     # Título de la ventana
-    #     self.setWindowTitle("Pagar")
-    #     # Tamaño fijo de la ventana
-    #     self.setFixedSize(500, 500)
-    #     # Quitar el botón de ayuda
-    #     self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-    #     # Aplica la hoja de estilo a la ventana
-    #     self.setStyleSheet("""
-    #         QWidget {
-    #             background-color: #DAC8AE;
-    #             color: #111111;
-    #         }
-
-    #         /* Estilo para los botones */
-    #         QPushButton {
-    #             background-color: #EFDECD;
-    #             color: #1A1110;
-    #             border: 2px solid #1A1110;
-    #             padding: 5px;
-    #         }
-
-    #         QPushButton:hover {
-    #             background-color: #CC7722;
-    #         }
-
-    #         /* Estilo para los cuadros de texto */
-    #         QLineEdit {
-    #             background-color: #FFFFFF;
-    #             color: #111111;
-    #             border: 1px solid #00416A;
-    #             padding: 4px;
-    #         }
-
-    #         QLineEdit:focus {
-    #             border: 2px solid #00416A;
-    #         }
-
-    #         /* Estilo para las etiquetas */
-    #         QLabel {
-    #             color: #1A1110;
-    #         }
-    #     """)
-    #     # Saldo pendiente
-    #     self.labelCredit = QLabel(self)
-    #     self.labelCredit.setText(f"Costo del libro: ${self.credit}")
-    #     # Etiqueta para nombre del beneficiario
-    #     self.labelNombre = QLabel(self)
-    #     self.labelNombre.setText("Nombre del beneficiario:")
-    #     self.inputNombre = QLineEdit(self)
-
-    #     # Etiqueta para numero de tarjeta
-    #     self.labelTarjeta = QLabel(self)
-    #     self.labelTarjeta.setText("Número de tarjeta:")
-    #     self.inputTarjeta = QLineEdit(self)
-    #     self.inputTarjeta.setInputMask("9999-9999-9999-9999")
         
-    #     # Selector de mes
-    #     self.labelMes = QLabel(self)
-    #     self.labelMes.setText("Mes de vencimiento:")
-    #     self.comboMes = QComboBox(self)
-    #     self.comboMes.addItems(["01 - Enero", "02 - Febrero", "03 - Marzo", "04 - Abril", "05 - Mayo", "06 - Junio",
-    #                             "07 - Julio", "08 - Agosto", "09 - Septiembre", "10 - Octubre", "11 - Noviembre", "12 - Diciembre"])
-
-    #     # Selector de año
-    #     self.labelAño = QLabel(self)
-    #     self.labelAño.setText("Año de vencimiento:")
-    #     self.comboAño = QComboBox(self)
-    #     current_year = datetime.now().year
-    #     self.comboAño.addItems([str(año) for año in range(current_year, current_year+15)])
-
-    #     # Iconos de Visa y Mastercard
-        
-    #     image_visa = os.path.join(script_dir, "imagenes/visa.png")
-    #     image_master = os.path.join(script_dir, "imagenes/mastercard.png")
-    #     pixmap_visa = QPixmap(image_visa)
-    #     pixmap_mastercard = QPixmap(image_master)
-    #     self.labelVisa = QLabel(self)
-    #     self.labelVisa.setPixmap(pixmap_visa.scaledToHeight(30))
-    #     self.labelVisa.setAlignment(Qt.AlignCenter)
-    #     self.labelVisa.setScaledContents(True)
-    #     self.labelMastercard = QLabel(self)
-    #     self.labelMastercard.setPixmap(pixmap_mastercard.scaledToHeight(30))
-    #     self.labelMastercard.setAlignment(Qt.AlignCenter)
-    #     self.labelMastercard.setScaledContents(True)
-
-    #     # Layout para los iconos
-    #     icon_layout = QHBoxLayout()
-    #     icon_layout.addWidget(self.labelVisa)
-    #     icon_layout.addWidget(self.labelMastercard)
-    #     icon_layout.setAlignment(Qt.AlignCenter)
-
-    #     self.btnPay = QPushButton("Pagar", self)
-    #     self.btnPay.clicked.connect(self.payBook)
-
-    #     layout = QVBoxLayout()
-    #     layout.addLayout(icon_layout)
-    #     layout.addWidget(self.labelCredit)
-    #     layout.addWidget(self.labelNombre)
-    #     layout.addWidget(self.inputNombre)
-    #     layout.addWidget(self.labelTarjeta)
-    #     layout.addWidget(self.inputTarjeta)
-    #     layout.addWidget(self.labelMes)
-    #     layout.addWidget(self.comboMes)
-    #     layout.addWidget(self.labelAño)
-    #     layout.addWidget(self.comboAño)
-    #     layout.addWidget(self.btnPay)
-
-    #     self.setLayout(layout)
-    #     self.center()
-
-
     def center(self):
         # Obtenemos la geometría de la ventana principal
         qr = self.frameGeometry()
@@ -2000,7 +1887,7 @@ class Ui_MainWindow(object):
             autor = self.tableSearch.item(selected_row, 1).text()  # Autor del libro
 
             # Verificar si el libro está disponible
-            if disponibilidad == 'Available':
+            if disponibilidad == self.translations['available']:
                 reply = QMessageBox.question(None, self.translations['reserve'], self.translations['reserved_info'],
                             QMessageBox.Ok | QMessageBox.Cancel, QMessageBox.Cancel)
                 if reply == QMessageBox.Ok:
@@ -2026,7 +1913,7 @@ class Ui_MainWindow(object):
                         self.ejecutar_query(query, values)
                         
                         QtWidgets.QMessageBox.information(None, self.translations['information'], self.translations['book_reserve_success'])
-                        self.tableSearch.item(selected_row, 4).setText(self.translations['available'])
+                        self.tableSearch.item(selected_row, 4).setText(self.translations['not_available'])
             else:
                 QtWidgets.QMessageBox.critical(None, "Error", self.translations['book_not_available'])
         else:

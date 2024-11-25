@@ -114,7 +114,7 @@ languages = {
         'response_error': 'Error al ejecturar consulta:',
         'reserved_log': 'Debes iniciar sesión para reservar un libro.',
         'reserved_info': 'El costo por reserva de cada libro es de $7.00 MXN por día, se te dará un limite de 15 días para retornarlo. Si no se devuelve a tiempo se cobrará una multa de $20 por cáda día que pase.\n(Es posible devolver antes el libro, solo se te cobrará lo correspondiente)',
-        'book_not_available': 'El libro seleecionado no está disponible.',
+        'book_not_available': 'El libro seleccionado no está disponible.',
         'book_select': 'Selecciona un libro para reservar.',
         'book_buy_log': 'Debes iniciar sesión para comprar un libro.',
         'book_buy_select': 'Selecciona un libro para comprar.',
